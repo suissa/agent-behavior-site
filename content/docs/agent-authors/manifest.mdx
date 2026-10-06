@@ -1,6 +1,6 @@
 ---
 title: Agent manifest
-description: Define the identity and metadata of an Agent without embedding its executable components.
+description: Define Agent identity and package metadata without embedding the Agent's semantic behavior.
 ---
 
 The root manifest is agent.json.
@@ -13,9 +13,11 @@ The root manifest is agent.json.
       "version": "1.0.0"
     }
 
-## Metadata
+The manifest answers: "Which Agent package is this?"
 
-The manifest may also describe:
+It does not answer the full behavioral question. That belongs to the Behavior Flow and its derived SKILL.md.
+
+## Metadata
 
 | Field | Purpose |
 | --- | --- |
@@ -28,29 +30,32 @@ The manifest may also describe:
 | license | License identifier. |
 | keywords | Discovery metadata. |
 | runtime | Runtime compatibility metadata. |
-| extensions | Runtime-specific metadata. |
+| extensions | Runtime-specific metadata under explicit extension namespaces. |
 
-The manifest identifies the Agent but does not inline its behavior.
+The schema is deliberately closed at the top level. Runtime-specific data belongs under extensions rather than arbitrary fields.
 
-## Fixed component locations
+## Fixed semantic projections
 
-The runtime discovers components from fixed locations:
-
-| Component | Location |
+| Semantic responsibility | Portable location |
 | --- | --- |
+| Agent identity | agent.json |
 | Agent behavior | SKILL.md |
 | Actions | actions/ |
 | Knowledge | knowledge/ |
-| MCPQ | mcpq.json |
+| Communication | mcpq.json |
 
-This fixed layout prevents every runtime from inventing a different discovery mechanism.
+The root SKILL.md is derived from the Agent's Behavior Flow.
 
 ## Package containment
 
-Every package path MUST resolve inside the Agent root. A manifest that causes package execution or loading to escape that boundary MUST be rejected or isolated according to the applicable component failure rule.
+Every package path MUST resolve inside the Agent root. A manifest, Skill, Action resource, or extension that attempts to escape the package boundary MUST be rejected or isolated according to the applicable component failure rule.
 
 ## Versioning
 
-The Agent package version and specification version have different purposes. The specification version defines the package contract. The Agent version identifies a particular Agent release.
+The Agent package version and specification version have different purposes.
+
+The specification version defines the package contract.
+
+The Agent version identifies a particular semantic Agent package release.
 
 Agents SHOULD use Semantic Versioning for the Agent version.
