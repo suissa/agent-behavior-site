@@ -193,7 +193,7 @@ The draft schema is deliberately closed: extension data belongs under extensions
 
 ## 6. Agent Skill
 
-The root SKILL.md is REQUIRED and MUST contain YAML frontmatter followed by Markdown.
+The root SKILL.md is REQUIRED and MUST contain YAML frontmatter followed by Markdown. Its frontmatter name MUST equal agent.json name.
 
 At minimum:
 
@@ -245,7 +245,7 @@ The fixed location is actions/. Each immediate child directory containing a vali
     └── cancel-order/
         └── SKILL.md
 
-An Action Skill is the portable behavioral projection for one Action.
+An Action Skill is the portable behavioral projection for one Action. Its frontmatter name MUST equal the Action directory name.
 
 An Action SHOULD specify:
 
@@ -463,7 +463,7 @@ Conceptually:
 
 This permits a runtime or testing system to ask whether the observed Trajectory satisfied the intended Behavior Flow, including payloads, events, writes, reads, outcomes, and recovery behavior.
 
-Intent-driven tests MAY express desired outcomes such as "I HOPE SEE Dashboard" rather than imperative implementation steps. The syntax of such tests is outside this package format, but the semantic distinction is relevant: a test wish validates the Trajectory against the Behavior Flow instead of merely checking an implementation command.
+Intent-driven tests MAY express desired outcomes such as "I HOPE SEE Dashboard" rather than imperative implementation steps. A representative trajectory language can express an actor and intent context such as AS Human, followed by interactions and a desired outcome. The syntax of such tests is outside this package format, but the semantic distinction is relevant: a test wish validates the Trajectory against the Behavior Flow instead of merely checking an implementation command.
 
 Observability systems MAY project events, metrics, traces, states, errors, and trajectories into Evidence. Such telemetry MUST remain subject to privacy, security, and retention policy.
 
