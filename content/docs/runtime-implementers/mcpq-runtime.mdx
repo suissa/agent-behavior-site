@@ -1,0 +1,67 @@
+---
+title: MCPQ runtime
+description: Execute queue-first channels and interoperate with MCP without collapsing asynchronous Agent work into synchronous calls.
+---
+
+MCPQ defines the Agent communication boundary. MCP remains authoritative for MCP protocol behavior.
+
+## Channel selection
+
+Read mcpq.json and select each channel's declared type.
+
+If type is absent, use queue.
+
+Queue is the default because long-running Agent work should not require a caller to hold a request open.
+
+## Queue execution
+
+A Queue runtime should support the guarantees declared by the channel:
+
+- enqueue;
+- acknowledgement;
+- retry;
+- idempotency;
+- correlation;
+- optional ordering;
+- dead-letter handling;
+- cancellation or expiry where supported.
+
+The runtime MUST NOT advertise guarantees it cannot enforce.
+
+## MCP execution
+
+For type mcp, establish the configured MCP connection and follow MCP lifecycle, capability negotiation, authorization, and transport rules.
+
+Do not reinterpret MCP messages as queue messages unless the MCPQ binding explicitly defines that mapping.
+
+## Long-running work
+
+MCP Tasks provide a standardized direction for durable asynchronous execution and deferred result retrieval. An MCPQ runtime may implement that behavior over an internal queue.
+
+The important invariant is that the Agent's execution identity, correlation identifiers, authorization context, and final result remain stable across retries, reconnections, and delayed completion.
+
+## Human healing
+
+A Queue channel is particularly suitable for human-healing flows:
+
+    Agent
+      |
+      v
+    human-healing queue
+      |
+      v
+    Human
+      |
+      v
+    decision / correction
+      |
+      v
+    Agent
+
+The Agent does not need to remain blocked while a human decides.
+
+## Runtime failures
+
+If one channel fails to connect or process work, continue operating independent Actions and channels when possible.
+
+A queue delivery failure follows its configured retry policy. An MCP authentication or handshake failure affects only that MCP channel unless the Agent explicitly marks the channel as required.
