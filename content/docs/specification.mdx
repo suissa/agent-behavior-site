@@ -1,6 +1,6 @@
 ---
 title: Agent Behavior Specification
-description: Normative contract for portable executable Agents, Actions, knowledge, and MCPQ channels.
+description: Normative contract for semantic Agents, derived Skills, Actions, Knowledge, Behavior Flows, and MCPQ communication.
 type: reference
 ---
 
@@ -8,62 +8,147 @@ Specification Version: 1.0.0-draft
 
 Status: Working Draft
 
-This document defines the Agent Behavior package model. It is intentionally compatible with the portable portions of Agent Skills and Agent Plugins, while introducing a different semantic center: the Agent is an executable Actor rather than a package of unrelated extensions.
+This document defines the Agent Behavior package and execution model. It reuses portable portions of Agent Skills and Agent Plugins, incorporates the persistent-knowledge and gated-evolution ideas demonstrated by WikiSkill, and adds a semantic execution model centered on Agent, Behavior Flow, Action, Actor, Runtime, and MCPQ.
+
+The key semantic rule is:
+
+> Every semantic Agent instance has one Agent Skill derived from its Behavior Flow.
+
+The SKILL.md file is therefore a portable behavioral projection of the semantic model. It is not the ultimate semantic source of truth.
 
 ## 1. Status and conformance
 
 The specification uses MUST, MUST NOT, REQUIRED, SHOULD, SHOULD NOT, and MAY as normative terms according to RFC 2119 and RFC 8174.
 
-A conformant runtime MUST implement the package boundary, manifest validation, Agent Skill discovery, Action discovery, and failure isolation rules applicable to the components it supports.
+A conformant runtime MUST implement package-boundary validation, Agent identity discovery, Agent Skill discovery, Action discovery, and the failure-isolation rules applicable to the components it supports.
 
-The specification is a working draft. The schemas in this repository are normative only for the corresponding draft revision and MUST NOT be treated as an established industry standard.
+This is a working draft. The schemas and canonical identifiers in this repository are draft artifacts and MUST NOT be presented as an established industry standard.
 
 ## 2. Design lineage
 
-Agent Behavior incorporates four layers of prior work.
+Agent Behavior is cumulative, but its semantics are intentionally different from the projects it incorporates.
 
 ### 2.1 Agent Skills
 
-Agent Skills defines a portable directory centered on SKILL.md, with YAML frontmatter and optional scripts, references, and assets. Progressive disclosure allows metadata to be discovered before the full instructions and resources are loaded.
+Agent Skills standardizes a portable directory centered on SKILL.md, with YAML frontmatter and optional scripts, references, and assets. Its progressive-disclosure model lets a runtime discover lightweight metadata before loading the complete instructions and supporting resources.
 
-Agent Behavior reuses this file-level contract wherever practical. The semantic role changes: an Agent's SKILL.md describes the Agent's durable behavior, while an Action's SKILL.md describes the behavior required to execute that Action.
+Agent Behavior reuses those file mechanics. The semantic role is extended:
+
+- root SKILL.md is the Agent's durable behavioral projection;
+- Action SKILL.md is the behavioral projection of one executable capability;
+- scripts, references, and assets remain implementation resources.
+
+The current Agent Skills specification requires name and description in SKILL.md frontmatter, constrains names to lowercase letters, numbers, and hyphens, and supports optional license, compatibility, metadata, and allowed-tools fields. citeturn138680search2
 
 ### 2.2 Agent Plugins
 
-Agent Plugins 1.0 defines a directory package with a manifest, fixed component locations, Agent Skills, MCP server configuration, extension namespaces, and narrow failure boundaries.
+Agent Plugins 1.0 standardizes a package with plugin.json, fixed component locations, Skills, MCP servers, extensions, and narrow failure boundaries. It is explicitly a package format for reusable components rather than an Agent execution ontology. citeturn138680search0turn138680search4
 
-Agent Behavior retains these interoperability principles but changes the package root from a generic Plugin to an Agent. The portable component locations become SKILL.md, actions/, knowledge/, and mcpq.json.
+Agent Behavior keeps the useful packaging and isolation principles while changing the semantic center from Plugin to Agent.
 
 ### 2.3 WikiSkill
 
-WikiSkill demonstrates a three-layer learning architecture: raw execution experience, a persistent knowledge wiki, and executable skills. Its evolution loop uses experience to propose skill changes and keeps a candidate only when an objective validation score strictly improves.
+WikiSkill separates raw execution experience, persistent knowledge, and executable skills, then uses a proposal and validation process to evolve skills. The paper explicitly identifies persistent knowledge accumulation as important to skill evolution. citeturn138680academia36
 
-Agent Behavior adopts this separation as a first-class knowledge lifecycle. A runtime MUST NOT silently turn raw experience into active behavior. Promotion MUST pass the configured validation policy.
+Agent Behavior maps that lifecycle into evidence, Wiki, evolution proposals, validation, and active derived Skills.
 
 ### 2.4 MCP and asynchronous execution
 
-MCP supplies interoperable tool and resource communication. Modern MCP work also provides durable task primitives for long-running operations.
+MCP defines interoperable protocol semantics. In 2026, the official Tasks extension provides durable task handles for long-running work, deferred result retrieval, progress state, cancellation, and input-required flows. citeturn316678search0turn316678search1
 
-Agent Behavior introduces MCPQ as the Agent-level channel abstraction. Its default channel mode is a Queue, because Agent execution is not inherently a request/response interaction.
+Agent Behavior introduces MCPQ as the Agent-level communication boundary. Queue is the default execution mode; MCP is an interoperability binding, not a replacement for queue semantics.
 
-## 3. Terminology
+## 3. Semantic model
 
-| Term | Meaning |
+Agent Behavior separates semantic definition, behavioral projection, executable capability, execution identity, and execution environment.
+
+### 3.1 A3 execution ontology
+
+The core chain is:
+
+    AtomicSkill
+         ↓
+    AtomicBehavior
+         ↓
+       Action
+         ↓
+       Actor
+         ↓
+      Runtime
+
+Each level has a different responsibility.
+
+| Level | Meaning |
 | --- | --- |
-| Agent | Executable Actor described by an Agent package. |
-| Agent Skill | Behavioral SKILL.md attached to an Agent. |
-| Action | A named executable capability of an Agent, represented by an Action directory and its SKILL.md. |
-| Knowledge | Persistent evidence, wiki knowledge, proposals, and evolution state. |
-| MCPQ | Agent communication channel abstraction combining queue-oriented delivery with optional MCP interoperability. |
-| Queue | Default MCPQ channel mode for asynchronous Agent communication. |
-| Runtime | Host that discovers, validates, loads, executes, and isolates Agents. |
-| Evidence | Immutable or append-only execution observations used by the knowledge lifecycle. |
-| Wiki | Persistent, curated knowledge derived from evidence. |
-| Proposal | Candidate change to an Agent Skill or Action Skill. |
-| Validation gate | Objective or policy-controlled test that decides whether a proposal may become active. |
-| Actor | Runtime identity responsible for executing an Agent. |
+| AtomicSkill | Smallest reusable semantic unit of capability, knowledge, or decision logic. |
+| AtomicBehavior | Smallest behavior-level unit that composes one or more AtomicSkills into an observable semantic behavior. |
+| Action | Executable capability boundary exposed by an Agent. |
+| Actor | Concrete execution identity that performs the Agent behavior. |
+| Runtime | Host that schedules, isolates, authorizes, observes, and executes Actors. |
 
-## 4. Agent package model
+This distinction prevents a Markdown Skill, an executable Action, and a runtime identity from being treated as the same object.
+
+### 3.2 Intent
+
+Intent is the semantic request, goal, or event meaning that causes an Agent behavior path to become relevant.
+
+An Intent is not an implementation command. It describes what should be achieved or what meaningful condition occurred.
+
+A runtime MAY receive an Intent directly from a user, another Agent, an event, a scheduled trigger, or an external system.
+
+### 3.3 Behavior Flow
+
+A Behavior Flow is the semantic flow that connects Intent, behaviors, Actions, decisions, outcomes, and recovery.
+
+It is the source model from which the portable Agent Skill is derived.
+
+Conceptually:
+
+    Intent
+      ↓
+    Behavior Flow
+      ├── AtomicBehavior
+      │      └── AtomicSkill
+      ├── decision / invariant
+      ├── Action
+      ├── recovery / escalation
+      └── Outcome
+             ↓
+        Agent SKILL.md
+        (derived projection)
+
+A conformant implementation MUST preserve the semantic identity between the Agent Skill and the Behavior Flow from which it was derived.
+
+The specification does not force one DSL for Behavior Flow. A project MAY represent it as structured JSON, YAML, semantic Markdown, another formal DSL, or generated artifacts, provided the implementation preserves identity, ordering or transition semantics, inputs, outputs, invariants, and outcomes.
+
+### 3.4 Trajectory
+
+A Trajectory is the observed execution path through a Behavior Flow.
+
+The distinction is:
+
+    Behavior Flow = what should happen
+    Trajectory   = what did happen
+
+Trajectories are evidence. They MUST NOT silently become active behavior.
+
+This distinction provides the bridge to intent-driven testing, trajectory validation, observability, and experience-driven evolution.
+
+### 3.5 Agent
+
+An Agent is a first-class semantic execution unit and Actor definition.
+
+An Agent MUST have:
+
+- stable identity in agent.json;
+- one root Agent Skill;
+- zero or more Actions;
+- optional persistent Knowledge;
+- optional MCPQ channels.
+
+The Agent Skill is derived from its Behavior Flow and expresses the durable behavior required of the Agent as a whole.
+
+## 4. Package model
 
 An Agent is a filesystem package rooted at one directory.
 
@@ -88,7 +173,7 @@ A complete package MAY contain:
 
 The runtime MUST resolve package paths within the filesystem-resolved Agent root. Symlinks, junctions, and equivalent mechanisms MUST NOT allow package configuration to escape the Agent root.
 
-The Agent root is the trust and discovery boundary. Runtime sandboxing is a separate concern and is not implied by this filesystem rule.
+The Agent root is the discovery and containment boundary. Sandbox isolation is a separate runtime responsibility.
 
 ## 5. Manifest
 
@@ -96,30 +181,21 @@ The root manifest MUST be agent.json.
 
 It MUST be a JSON object containing:
 
-- $schema
-- name
-- version
+- $schema;
+- name;
+- version.
 
-It MAY additionally contain description, author, homepage, repository, license, keywords, runtime, extensions, and other fields explicitly standardized by a future specification revision.
+It MAY additionally contain description, author, homepage, repository, license, keywords, runtime, and extensions.
 
-Unknown top-level fields SHOULD be reported and ignored when the manifest is otherwise valid. A malformed required field is fatal to the Agent package.
+The manifest identifies the Agent. It MUST NOT inline the Agent Skill, Action definitions, Knowledge, or MCPQ configuration. These components have separate, fixed locations.
 
-Example:
-
-    {
-      "$schema": "https://github.com/suissa/agent-behavior-site/blob/main/public/schemas/1.0.0/agent.schema.json",
-      "name": "sales-agent",
-      "version": "1.0.0",
-      "description": "Handles order creation and customer follow-up."
-    }
-
-The manifest identifies the Agent. It MUST NOT inline the Agent Skill, Action definitions, or MCPQ configuration. Those components have fixed locations.
+The draft schema is deliberately closed: extension data belongs under extensions rather than arbitrary top-level keys.
 
 ## 6. Agent Skill
 
-The root SKILL.md is REQUIRED.
+The root SKILL.md is REQUIRED and MUST contain YAML frontmatter followed by Markdown.
 
-It follows the Agent Skills file mechanics:
+At minimum:
 
     ---
     name: sales-agent
@@ -128,29 +204,38 @@ It follows the Agent Skills file mechanics:
 
     # Sales Agent
 
-    Describe the durable behavior of the Agent.
+    Durable Agent behavior derived from the Agent Behavior Flow.
 
-The name and description fields retain the portability constraints of Agent Skills. The body defines the Agent's behavioral contract.
+The file follows the portable Agent Skills mechanics while taking a different semantic role.
 
 The Agent Skill SHOULD describe:
 
-- intent and scope;
-- evidence the Agent should inspect;
+- Agent intent and scope;
+- evidence and context that should be inspected;
 - decisions and invariants;
 - execution principles;
 - recovery behavior;
 - important failure modes;
-- escalation and human-healing boundaries.
+- escalation and human-healing boundaries;
+- expected outcomes.
 
-An Agent Skill is not merely a prompt file. It is the durable behavioral definition from which runtime instructions, evaluations, documentation, and future Action behavior may be derived.
+The root SKILL.md is a projection. A semantic source MAY regenerate it. Implementations MUST NOT create contradictory active behavior by silently editing the derived Skill independently of its semantic source.
+
+### 6.1 Progressive disclosure
+
+At discovery time, a runtime SHOULD load lightweight Skill metadata.
+
+When an Action is selected, its complete SKILL.md SHOULD be loaded.
+
+References, assets, and scripts SHOULD be loaded only when required.
+
+This preserves the context-efficiency principle of Agent Skills. citeturn138680search2
 
 ## 7. Actions
 
-Actions are the executable capabilities of an Agent.
+Actions are the executable capability boundaries of an Agent.
 
 The fixed location is actions/. Each immediate child directory containing a valid SKILL.md is one Action.
-
-Example:
 
     actions/
     ├── create-order/
@@ -160,32 +245,34 @@ Example:
     └── cancel-order/
         └── SKILL.md
 
-An Action Skill uses the same portable SKILL.md mechanics as Agent Skills, but its semantics are scoped to one executable capability.
+An Action Skill is the portable behavioral projection for one Action.
 
 An Action SHOULD specify:
 
-1. when the Action applies;
+1. applicability or trigger;
 2. required evidence and inputs;
 3. preconditions and invariants;
 4. decision logic;
-5. execution steps;
+5. execution semantics;
 6. postconditions and observable outputs;
 7. recovery and escalation;
 8. prohibited or unsafe outcomes.
 
 Actions MAY use scripts, references, and assets following Agent Skills conventions.
 
-A runtime MUST NOT infer an Action merely from arbitrary files outside actions/.
+A runtime MUST NOT infer an Action from arbitrary files outside actions/.
 
-## 8. Knowledge and evolution
+An Action belongs to exactly one Agent package. Reusable expertise can be shared as an external Skill and then adapted into an Agent Action without changing the underlying SKILL.md mechanics.
 
-Knowledge is intentionally separate from active Skills.
+## 8. Knowledge
 
-A recommended layout is:
+Knowledge is separate from active behavioral instructions.
+
+Recommended layout:
 
     knowledge/
     ├── evidence/
-    │   └── <execution>.jsonl
+    │   └── <trajectory>.jsonl
     ├── wiki/
     │   ├── index.md
     │   ├── patterns/
@@ -197,37 +284,56 @@ A recommended layout is:
 
 ### 8.1 Evidence
 
-Evidence records what happened during execution. It SHOULD be append-only and SHOULD contain enough provenance to reconstruct the observation without exposing secrets or unnecessary personal data.
+Evidence records what happened during execution. It SHOULD be append-only and contain provenance sufficient to reconstruct the observation without persisting secrets or unnecessary personal data.
+
+Evidence may include validated Trajectories, outcomes, failures, metrics, traces, events, and other runtime observations.
 
 ### 8.2 Wiki
 
-The Wiki is persistent knowledge distilled from evidence: successful strategies, failure modes, root causes, constraints, counterexamples, and reusable patterns.
+The Wiki is persistent knowledge distilled from Evidence.
+
+It can contain:
+
+- successful strategies;
+- failure modes;
+- root causes;
+- constraints;
+- counterexamples;
+- reusable patterns.
 
 The Wiki MUST NOT be treated as automatically active runtime instructions.
 
 ### 8.3 Evolution
 
-A proposer MAY derive a candidate change to an Agent Skill or Action Skill from the Wiki and evidence.
+An evolution subsystem MAY use Evidence and Wiki knowledge to propose changes to a Behavior Flow, Agent Skill projection, or Action behavior.
 
-A candidate MUST be evaluated by the configured validation policy before activation when validation is required by the Agent manifest or runtime policy.
+The preferred direction is:
 
-The default promotion rule is:
+    Evidence
+      ↓
+    Wiki
+      ↓
+    Proposal
+      ↓
+    Validation
+      ↓
+    Behavior Flow change
+      ↓
+    Derived Skill regeneration
 
-    candidate_score > best_score
-            => promote
-    otherwise
-            => reject active change
-            + retain evidence and proposal history
+A candidate MUST pass the configured validation policy before becoming active when validation is required.
 
-A rejected proposal MUST NOT erase the knowledge that led to it. This preserves the central WikiSkill property that knowledge compounds even when a particular skill change does not.
+A rejected proposal MUST NOT erase the Evidence, Wiki knowledge, or proposal history that produced it.
 
-## 9. MCPQ channels
+This preserves the central WikiSkill principle that knowledge can compound even when a particular behavior change is rejected. citeturn138680academia36
 
-MCPQ is the communication abstraction of an Agent.
+## 9. MCPQ
+
+MCPQ is the communication boundary of an Agent.
 
 The root configuration is mcpq.json.
 
-A channel has a stable name and a mode. The default mode is queue.
+A channel has a stable name and a type. The default type is queue.
 
     {
       "$schema": "https://github.com/suissa/agent-behavior-site/blob/main/public/schemas/1.0.0/mcpq.schema.json",
@@ -242,93 +348,186 @@ A channel has a stable name and a mode. The default mode is queue.
       }
     }
 
-Queue mode is the default because an Agent is an asynchronous Actor: work can be accepted, retried, delayed, resumed, routed, or escalated without requiring the caller to keep a request open.
-
-MCP mode MAY be used where interoperability with an MCP server is required. The MCP protocol remains authoritative for MCP message and capability semantics.
-
-MCPQ does not redefine MCP. It defines where an Agent communicates and how work is delivered at the Agent boundary.
+Queue is the default because an Agent Actor may need to accept work, retry, delay, resume, fan out, wait for human healing, or hand work to another Actor without keeping the initiating connection open.
 
 ### 9.1 Queue semantics
 
-A Queue channel SHOULD define:
+A Queue channel SHOULD define the guarantees that matter to the Actor:
 
 - delivery semantics;
 - ordering requirements when relevant;
 - retry policy;
+- acknowledgement semantics;
 - visibility or lease behavior;
 - dead-letter behavior;
 - correlation and causation identifiers;
 - idempotency requirements;
-- acknowledgement semantics.
+- cancellation or expiry semantics when supported.
 
-The exact queue technology is runtime-defined.
+The queue technology is runtime-defined.
+
+A runtime MUST NOT advertise guarantees it cannot enforce.
 
 ### 9.2 MCP interoperability
 
-An MCPQ channel MAY expose or consume MCP operations. A runtime MUST NOT assume that an MCP endpoint is synchronous simply because MCP is being used.
+An MCPQ channel MAY bind an Agent boundary to MCP.
 
-Long-running work MAY use MCP Tasks or an equivalent queue-backed runtime mechanism. MCP's current Tasks extension models durable asynchronous execution and deferred result retrieval. The Agent Behavior runtime may map that capability onto a Queue without changing MCP wire semantics.
+MCP remains authoritative for:
 
-## 10. Discovery
+- MCP message semantics;
+- capability negotiation;
+- authorization;
+- transports;
+- MCP lifecycle;
+- MCP Tasks semantics.
+
+MCPQ does not redefine MCP.
+
+### 9.3 MCP Tasks
+
+Current MCP Tasks is an official extension identified as io.modelcontextprotocol/tasks. It models durable asynchronous task state with polling and deferred results. citeturn316678search0turn316678search1
+
+An Agent Behavior runtime MAY implement an MCP channel using an internal Queue. That mapping is an implementation strategy, not a change to the MCP wire protocol.
+
+## 10. Actor and Runtime
+
+The Agent describes behavior; the Actor is the execution identity; the Runtime provides the environment in which execution occurs.
+
+    Semantic Agent
+         │
+         ▼
+    Agent Skill
+         │
+         ▼
+       Actor
+         │
+         ▼
+      Runtime
+       ├── scheduling
+       ├── isolation
+       ├── authorization
+       ├── observability
+       └── policy
+
+A runtime is responsible for operational concerns that should not be hidden inside SKILL.md, including sandboxing, secret handling, process management, model selection, queue implementation, and observability backends.
+
+An Agent package MUST NOT assume that the runtime is a single process.
+
+## 11. Discovery and failure isolation
 
 A conformant runtime MUST:
 
 1. establish the filesystem-resolved Agent root;
 2. load and validate agent.json;
 3. load the root SKILL.md;
-4. discover immediate Action directories;
-5. discover mcpq.json when present;
-6. initialize supported knowledge and evolution facilities according to policy;
-7. report independent failures without invalidating unrelated valid components.
+4. resolve the Agent's semantic identity, Behavior Flow provenance, and Skill provenance when available;
+5. discover immediate Action directories;
+6. discover mcpq.json when present;
+7. initialize authorized Knowledge facilities;
+8. apply supported extensions;
+9. start execution only after required validation and trust checks pass.
 
-Missing optional component locations are valid absence.
+Failure boundaries are narrow:
 
-A malformed root manifest or missing root SKILL.md invalidates the Agent package.
+| Failure | Effect |
+| --- | --- |
+| Invalid agent.json | Reject Agent. |
+| Missing or invalid root SKILL.md | Reject Agent. |
+| Invalid Action | Disable only that Action. |
+| Invalid MCPQ channel | Disable only that channel when safely isolatable. |
+| MCP connection failure | Disable only that connection unless explicitly required by Agent policy. |
+| Queue delivery failure | Apply queue retry or dead-letter policy. |
+| Failed evolution proposal | Keep current active behavior and retain proposal history. |
 
-A malformed Action invalidates only that Action.
+A broken component MUST NOT disable independent valid components.
 
-A malformed MCPQ channel invalidates only that channel when it can be isolated safely.
+## 12. Intent, trajectory, testing, and observability
 
-A runtime MUST NOT make a broken Action or channel prevent independent Actions or channels from loading.
+Agent Behavior treats execution as a semantic trajectory rather than only a sequence of log lines.
 
-## 11. Progressive disclosure
+Conceptually:
 
-Agent Behavior retains the progressive-disclosure principle of Agent Skills.
+    Intent
+      ↓
+    Behavior Flow
+      ↓
+    Atomic Behaviors
+      ↓
+    Actions
+      ↓
+    Observed Trajectory
+      ↓
+    Evidence
+      ↓
+    Validation / Knowledge
 
-At discovery time, runtimes SHOULD load only lightweight metadata.
+This permits a runtime or testing system to ask whether the observed Trajectory satisfied the intended Behavior Flow, including payloads, events, writes, reads, outcomes, and recovery behavior.
 
-When an Action is selected, the runtime loads its complete SKILL.md.
+Intent-driven tests MAY express desired outcomes such as "I HOPE SEE Dashboard" rather than imperative implementation steps. The syntax of such tests is outside this package format, but the semantic distinction is relevant: a test wish validates the Trajectory against the Behavior Flow instead of merely checking an implementation command.
 
-References, assets, and scripts SHOULD be loaded or executed only when required by the Action.
+Observability systems MAY project events, metrics, traces, states, errors, and trajectories into Evidence. Such telemetry MUST remain subject to privacy, security, and retention policy.
 
-The root Agent Skill may be loaded earlier because it defines the Agent's behavior, but runtimes SHOULD still avoid loading unrelated Action resources into context.
+## 13. Security and trust
 
-## 12. Security and trust
+Structural validity is not trust.
 
-Skills and Actions can change Agent behavior and may execute scripts. A valid package is therefore not automatically trusted.
+Skills, Action scripts, MCP endpoints, queue messages, and learned Knowledge MUST be treated as untrusted until runtime policy authorizes them.
 
 Runtimes SHOULD provide:
 
 - package provenance;
 - content digests or signatures where available;
-- explicit permission and trust policy;
-- sandboxing for subprocesses;
-- secret isolation;
+- explicit trust and permission policy;
 - path containment;
-- audit logs;
+- subprocess sandboxing;
+- secret isolation;
+- authentication and authorization;
+- tenant isolation;
+- auditability;
 - policy enforcement before external side effects.
 
-MCPQ channels MUST preserve authentication, authorization, tenant isolation, and correlation boundaries.
+Knowledge ingestion SHOULD sanitize secrets and unnecessary personal data before persistence.
 
-Knowledge ingestion SHOULD sanitize secrets and sensitive data before persistence. The Agent Behavior specification does not grant a Skill permission to read arbitrary private knowledge.
+MCPQ MUST preserve authorization and correlation boundaries across asynchronous delivery.
 
-## 13. Compatibility with Agent Skills
+A human-healing channel MUST carry sufficient correlation and authorization context to allow safe continuation of the original Behavior Flow without transferring unnecessary secrets.
 
-A directory containing a conventional Agent Skills SKILL.md can be represented as an Action without changing the file itself.
+## 14. Semantic source versus portable artifacts
 
-This makes migration possible:
+The specification distinguishes semantic source artifacts from portable runtime projections.
 
-    Agent Skill
+The semantic source MAY describe:
+
+- Intent;
+- Behavior Flow;
+- AtomicSkills;
+- AtomicBehaviors;
+- Actions;
+- invariants;
+- outcomes;
+- runtime policies.
+
+The portable package contains executable and discoverable projections:
+
+    Behavior Flow
+        │
+        ├──→ Agent SKILL.md
+        │
+        └──→ Action SKILL.md files
+                    │
+                    ├──→ scripts/
+                    ├──→ references/
+                    └──→ assets/
+
+This allows Semantic-as-Code implementations to use structured semantic files without making a specific authoring DSL part of the portable package contract.
+
+The important invariant is traceability: a runtime-visible Skill MUST be attributable to a semantic definition and version.
+
+## 15. Compatibility with Agent Skills
+
+A conventional Agent Skills directory can be adapted into an Action:
+
+    External Skill
         │
         ├── SKILL.md
         ├── scripts/
@@ -343,92 +542,141 @@ This makes migration possible:
         ├── references/
         └── assets/
 
-The difference is semantic scope. Agent Skills says "this is reusable expertise for an agent"; Agent Behavior says "this is the behavior and executable capability of this Action within an Agent".
+The file-level mechanics remain portable; the semantic owner changes from reusable expertise to capability belonging to this Agent.
 
-## 14. Compatibility with Agent Plugins
+The reverse projection is also possible: an Action Skill can be exposed as a conventional Agent Skill when the hosting environment does not understand Agent Behavior.
 
-An Agent Plugin can be adapted mechanically:
+## 16. Compatibility with Agent Plugins
 
-    plugin.json       → agent.json
-    skills/<name>/    → actions/<name>/
-    mcp.json          → mcpq.json
+An Agent Plugin can be projected conceptually:
 
-The Agent Behavior model adds the root SKILL.md and optional knowledge/ lifecycle.
+    plugin.json        → agent.json
+    skills/<name>/     → actions/<name>/
+    mcp.json           → mcpq.json
 
-A compatibility layer MAY expose Agent Behavior packages as Agent Plugins by projecting Actions as Skills and MCPQ MCP bindings as MCP servers.
+The projection is intentionally not lossless.
 
-This projection is intentionally lossy when the target format has no representation for Agent identity, queue semantics, or persistent knowledge.
+Agent Behavior adds:
 
-## 15. Compatibility with WikiSkill
+- an Agent as the semantic execution unit;
+- a root Agent Skill;
+- Behavior Flow derivation;
+- Action ownership;
+- persistent Evidence and Wiki knowledge;
+- gated evolution;
+- Queue-first MCPQ communication;
+- Actor and Runtime separation.
 
-WikiSkill's separation between experience, persistent knowledge, and executable skills maps directly:
+A compatibility layer MAY expose Actions as Plugin Skills and MCPQ MCP bindings as Plugin MCP servers.
 
-| WikiSkill concept | Agent Behavior |
+A plugin package remains valid as a plugin even though it does not contain these additional semantic layers. Agent Behavior MUST NOT claim that every Plugin runtime supports them.
+
+## 17. Compatibility with WikiSkill
+
+WikiSkill's separation maps as follows:
+
+| WikiSkill | Agent Behavior |
 | --- | --- |
-| Raw execution traces | knowledge/evidence/ |
-| Wiki | knowledge/wiki/ |
-| Active skills | Agent SKILL.md and Action SKILL.md |
-| Skill proposer | Evolution subsystem |
-| Validation gate | Agent validation policy |
+| Raw execution experience | knowledge/evidence/ |
+| Persistent wiki | knowledge/wiki/ |
+| Executable skill | derived Agent or Action SKILL.md |
+| Skill proposer | evolution subsystem |
+| Validation gate | configured Agent or Runtime validation policy |
 | Rejected proposal retained | knowledge/evolution/ |
 
-Agent Behavior does not require a particular LLM, proposer architecture, validator implementation, or benchmark. The lifecycle is the portable contract; the implementation is runtime-specific.
+The principal semantic difference is that Agent Behavior places the Behavior Flow before the portable Skill projection. A learning subsystem SHOULD therefore propose semantic behavior changes first and regenerate the Skill projection rather than treating arbitrary prompt text as the sole source of truth.
 
-## 16. Versioning
+## 18. Scope boundaries
 
-The specification version identifies the manifest and channel schemas together.
+Agent Behavior is an Agent execution and package specification, not a specification for an entire application stack.
 
-Published schema identifiers MUST remain immutable.
+The following may integrate with Agent Behavior but are outside this package contract unless another specification is adopted:
 
-Agents SHOULD use Semantic Versioning for version.
+- A2UI or a particular frontend protocol;
+- a specific database or storage-agent topology;
+- a specific observability backend;
+- a particular LLM or multi-agent framework;
+- a particular queue implementation;
+- application-level LGPD data models;
+- a particular AON implementation.
+
+This boundary prevents unrelated infrastructure choices from becoming accidental parts of the portable Agent format.
+
+## 19. Versioning
+
+The specification version identifies the package contract and its canonical schemas together.
+
+Draft schema identifiers are provisional. Once a release is published, its canonical schema identifiers MUST be immutable and MUST NOT be reassigned to different contents.
+
+Agent packages SHOULD use Semantic Versioning for version.
 
 A breaking change to the Agent package contract requires a new specification version.
 
-An Action MAY evolve independently when its behavior contract is versioned by the containing Agent package or an explicit Action version policy.
+Action behavior MAY evolve independently when the containing Agent version or an explicit Action version policy establishes the compatibility boundary.
 
-## 17. Conformance checklist
+## 20. Conformance checklist
 
 A runtime claiming conformance MUST:
 
 - validate the Agent root boundary;
 - validate agent.json;
-- require and load the root SKILL.md;
-- discover Actions from actions/;
-- preserve Agent Skills-compatible SKILL.md semantics;
+- require and load the root Agent Skill;
+- preserve the Agent Skill to Behavior Flow semantic derivation;
+- discover Actions only from actions/;
+- preserve Agent Skills-compatible SKILL.md mechanics;
 - isolate invalid Actions;
 - recognize mcpq.json when MCPQ is supported;
-- use Queue as the default MCPQ mode;
-- isolate invalid channels;
-- keep persistent knowledge separate from active runtime behavior;
-- preserve rejected evolution proposals when an evolution subsystem is enabled;
-- enforce configured validation gates before promoting learned behavior;
-- avoid treating external Agent Skill, Plugin, MCP, or WikiSkill implementations as trusted merely because they are structurally valid.
+- default channel type to queue when omitted;
+- isolate invalid MCPQ channels;
+- keep Knowledge separate from active runtime behavior;
+- preserve rejected evolution proposals when evolution is enabled;
+- enforce validation gates before promoting learned behavior;
+- preserve correlation, authorization, and identity across asynchronous work;
+- avoid treating structurally valid external Skills, Plugins, MCP endpoints, or Wiki artifacts as automatically trusted.
 
 ## Appendix A — Concept map
 
-    Agent Skills
-         │
-         │ SKILL.md + progressive disclosure
-         ▼
-    Agent Plugins
-         │
-         │ packaging + discovery + MCP
-         ▼
-    WikiSkill
-         │
-         │ evidence + wiki + gated evolution
-         ▼
-    Agent Behavior
-         │
-         ├── Agent
-         │    └── SKILL.md
-         ├── Actions
-         │    └── SKILL.md
-         ├── Knowledge
-         │    ├── Evidence
-         │    ├── Wiki
-         │    └── Evolution
-         └── MCPQ
-              └── Queue by default
+    Intent
+      │
+      ▼
+    Behavior Flow
+      │
+      ├── AtomicSkill
+      │      ↓
+      ├── AtomicBehavior
+      │      ↓
+      └── Action
+             ↓
+          Agent
+          ├── agent.json
+          ├── SKILL.md  ← derived Agent Skill
+          ├── actions/
+          ├── knowledge/
+          └── mcpq.json
+                 │
+                 ▼
+               Actor
+                 │
+                 ▼
+              Runtime
+                 │
+         observed Trajectory
+                 │
+                 ▼
+              Evidence
+                 │
+                 ▼
+                Wiki
+                 │
+                 ▼
+             Evolution
+                 │
+                 └──→ validated Behavior Flow change
+                              │
+                              └──→ regenerated Skill
 
-The resulting model treats an Agent as a first-class Actor whose behavior, capabilities, learning state, and communication boundaries are explicitly represented.
+Agent Skills contributes the portable SKILL.md primitive and progressive disclosure.
+Agent Plugins contributes package discovery, manifests, MCP configuration, and failure isolation.
+WikiSkill contributes persistent knowledge and gated evolution.
+MCP contributes interoperable communication semantics.
+Agent Behavior composes these into a behavior-first Agent execution model with explicit semantic ownership.
