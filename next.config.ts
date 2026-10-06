@@ -3,15 +3,15 @@ import type { NextConfig } from "next";
 
 const withMDX = createMDX();
 
-const publishedSchemaPaths = [
+const draftSchemaPaths = [
   "/schemas/1.0.0/agent.schema.json",
   "/schemas/1.0.0/mcpq.schema.json",
 ] as const;
 
-const immutableSchemaHeaders = [
+const draftSchemaHeaders = [
   {
     key: "Cache-Control",
-    value: "public, max-age=31536000, immutable",
+    value: "public, max-age=0, must-revalidate",
   },
 ];
 
@@ -26,9 +26,9 @@ const config: NextConfig = {
   },
 
   async headers() {
-    return publishedSchemaPaths.map((source) => ({
+    return draftSchemaPaths.map((source) => ({
       source,
-      headers: immutableSchemaHeaders,
+      headers: draftSchemaHeaders,
     }));
   },
 };
