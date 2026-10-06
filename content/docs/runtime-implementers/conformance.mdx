@@ -6,28 +6,44 @@ type: reference
 
 This checklist is non-normative. The complete specification governs when wording differs.
 
+## Semantic model
+
+- [ ] Preserve the distinction Intent → Behavior Flow → Trajectory.
+- [ ] Preserve AtomicSkill → AtomicBehavior → Action → Actor → Runtime boundaries.
+- [ ] Treat the root Agent Skill as derived from the Agent's Behavior Flow.
+- [ ] Preserve semantic source and Skill provenance when available.
+
 ## Package
 
 - [ ] Load an Agent from a directory.
 - [ ] Enforce the filesystem-resolved Agent boundary.
 - [ ] Validate agent.json against a locally supported schema.
 - [ ] Require the root SKILL.md.
+- [ ] Require root Skill name to match agent.json name.
 - [ ] Validate Agent Skill frontmatter using the portable Agent Skills rules.
 
 ## Actions
 
 - [ ] Discover Actions only from actions/.
 - [ ] Validate each Action independently.
+- [ ] Require Action Skill name to match its directory name.
 - [ ] Preserve scripts, references, and assets as Action-local resources.
 - [ ] Continue loading after an independent Action fails.
 - [ ] Do not recursively invent Actions.
 
-## Knowledge
+## Knowledge and evolution
 
-- [ ] Keep evidence separate from active Skills.
-- [ ] Treat Wiki knowledge as persistent learning state, not automatic runtime instructions.
+- [ ] Keep Evidence separate from active Skills.
+- [ ] Keep Wiki knowledge separate from active runtime instructions.
 - [ ] Retain rejected evolution proposals.
 - [ ] Enforce the configured validation gate before promoting learned behavior.
+- [ ] Prefer semantic Behavior Flow changes followed by Skill regeneration.
+
+## Trajectory and testing
+
+- [ ] Preserve correlation between Intent, Behavior Flow, Actions, and observed Trajectory.
+- [ ] Allow validation against payloads, events, state changes, outputs, errors, recovery, and final outcome when the runtime exposes them.
+- [ ] Do not treat raw telemetry as active behavior.
 
 ## MCPQ
 
@@ -36,7 +52,7 @@ This checklist is non-normative. The complete specification governs when wording
 - [ ] Validate each channel independently.
 - [ ] Implement the queue guarantees actually advertised.
 - [ ] Follow MCP protocol semantics for MCP channels.
-- [ ] Preserve correlation and authorization across asynchronous execution.
+- [ ] Preserve correlation, causation, authorization, and execution identity across asynchronous work.
 
 ## Security
 
