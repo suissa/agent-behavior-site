@@ -10,6 +10,10 @@
     },
     "channels": {
       "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(?:[-.][a-z0-9]+)*$"
+      },
       "additionalProperties": {
         "$ref": "#/$defs/channel"
       }
@@ -25,33 +29,131 @@
           "enum": ["queue", "mcp"],
           "default": "queue"
         },
+        "direction": {
+          "enum": ["inbound", "outbound", "bidirectional"],
+          "default": "bidirectional"
+        },
         "delivery": {
           "enum": ["at-most-once", "at-least-once", "exactly-once"]
         },
         "ordering": {
           "enum": ["none", "per-key", "global"]
         },
+        "message": {
+          "type": "object",
+          "properties": {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contentType": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "correlation": {
+          "type": "object",
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "default": true
+            },
+            "causation": {
+              "type": "boolean",
+              "default": true
+            },
+            "idempotency": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "ack": {
+          "enum": ["automatic", "explicit"],
+          "default": "explicit"
+        },
+        "visibilityTimeoutMs": {
+          "type": "integer",
+          "minimum": 1
+        },
         "retry": {
           "type": "object",
-          "additionalProperties": true
+          "properties": {
+            "maxAttempts": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "initialDelayMs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxDelayMs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "multiplier": {
+              "type": "number",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
         },
         "deadLetter": {
           "type": "object",
-          "additionalProperties": true
+          "properties": {
+            "channel": {
+              "type": "string",
+              "minLength": 1
+            },
+            "maxDeliveries": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
         },
         "mcp": {
           "type": "object",
           "properties": {
-            "url": { "type": "string" },
-            "transport": { "type": "string" },
-            "headers": {
-              "type": "object",
-              "additionalProperties": { "type": "string" }
+            "server": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Runtime-managed identifier for the MCP server."
+            },
+            "transport": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "credentialRef": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Runtime-managed credential reference. Secrets MUST NOT be embedded here."
             }
           },
+          "required": ["server"],
           "additionalProperties": false
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": { "const": "mcp" }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["mcp"]
+          }
+        }
+      ],
       "additionalProperties": false
     }
   }
