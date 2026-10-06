@@ -1,53 +1,78 @@
 ---
-title: Build an Agent Plugin
-description: Create the smallest portable package and add components in fixed locations.
+title: Build an Agent
+description: Create a portable Agent package with an Agent Skill, Actions, knowledge, and MCPQ channels.
 ---
 
-An Agent Plugin is a self-contained directory. Every plugin has a root `plugin.json`; skills and MCP configuration are optional.
+An Agent package is a directory whose root identifies one executable Actor.
 
-## Create a minimal plugin
+## Minimal package
 
-```text
-hello-plugin/
-├── plugin.json
-└── skills/
-    └── greet/
-        └── SKILL.md
-```
+    my-agent/
+    ├── agent.json
+    ├── SKILL.md
+    └── actions/
+        └── hello/
+            └── SKILL.md
 
-Create `plugin.json`:
+agent.json identifies the package. The root SKILL.md defines the Agent's durable behavior. Each directory below actions/ defines one executable capability.
 
-```json title="plugin.json"
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "hello-plugin"
-}
-```
+## Add communication
 
-Create the skill:
+    my-agent/
+    ├── agent.json
+    ├── SKILL.md
+    ├── actions/
+    │   ├── hello/
+    │   │   └── SKILL.md
+    │   └── summarize/
+    │       └── SKILL.md
+    └── mcpq.json
 
-```markdown title="skills/greet/SKILL.md"
----
-name: greet
-description: Greet the user and offer help.
----
+MCPQ channels are optional. When present, Queue is the default channel mode.
 
-Greet the user and offer help.
-```
+## Add persistent knowledge
 
-A skills-capable client loads `plugin.json`, discovers the immediate children of `skills/`, and validates each `SKILL.md` against the Agent Skills specification. To add MCP servers, place `mcp.json` at the plugin root using the same Agent Plugins schema version.
+For Agents that learn from experience, use:
 
-For a copyable package with a complete manifest and a real skill, see the [Agent Plugins example](https://github.com/agentplugins/agent-plugins-example).
+    knowledge/
+    ├── evidence/
+    ├── wiki/
+    └── evolution/
 
-## Package boundaries
+Keep evidence and wiki state separate from active SKILL.md files. A learned change should pass a validation gate before it becomes active behavior.
 
-Files supplied by the package must resolve within the plugin root. Configuration fields defined as plugin-relative paths begin with `./`; symlinks and equivalent filesystem mechanisms must not be used to escape the package.
+## Agent-level SKILL.md
 
-Client-managed installation, distribution, enablement, updates, and user interface are outside the portable specification.
+The root skill should describe durable behavior, not a list of every tool.
 
-## Next steps
+    ---
+    name: support-agent
+    description: Resolves customer support requests while preserving evidence, authorization, and escalation boundaries.
+    ---
 
-- **[Manifest](/plugin-authors/manifest)** — Define the plugin identity, metadata, and target specification version.
-- **[Skills](/plugin-authors/skills)** — Package Agent Skills under the fixed `skills/` directory.
-- **[MCP servers](/plugin-authors/mcp-servers)** — Configure local and remote MCP connections in `mcp.json`.
-- **[Client extensions](/plugin-authors/client-extensions)** — Add namespaced behavior for particular clients without changing the portable contract.
+    # Support Agent
+
+    State the Agent's scope, evidence requirements, decisions, execution principles, recovery rules, and failure boundaries.
+
+## Action-level SKILL.md
+
+Actions are where executable capability becomes concrete.
+
+An Action should define its trigger, inputs, preconditions, decision rules, observable execution, postconditions, recovery, and prohibited outcomes.
+
+The format remains compatible with the Agent Skills SKILL.md mechanics.
+
+## Authoring rule
+
+Do not duplicate the same behavioral contract in the Agent Skill and every Action. The Agent Skill defines global behavior; an Action defines capability-specific behavior. Shared references belong in references/ or the persistent knowledge layer when they are learned artifacts.
+
+## Validation
+
+Before publishing:
+
+1. Validate agent.json.
+2. Validate the root SKILL.md using Agent Skills-compatible rules.
+3. Validate every Action independently.
+4. Validate mcpq.json when present.
+5. Run representative trajectories through the configured validation gate.
+6. Confirm rejected evolution proposals remain in knowledge/evolution/ rather than silently disappearing.
