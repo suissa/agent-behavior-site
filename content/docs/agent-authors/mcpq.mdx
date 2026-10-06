@@ -1,0 +1,74 @@
+---
+title: MCPQ channels
+description: Configure queue-first Agent communication with optional MCP interoperability.
+---
+
+MCPQ is the Agent communication boundary.
+
+The root configuration is mcpq.json. A channel defaults to Queue mode.
+
+## Minimal configuration
+
+    {
+      "$schema": "https://github.com/suissa/agent-behavior-site/blob/main/public/schemas/1.0.0/mcpq.schema.json",
+      "channels": {
+        "orders": {
+          "type": "queue"
+        }
+      }
+    }
+
+## Channel model
+
+Each channel has a stable name and a type.
+
+Supported types in this draft are:
+
+- queue — the default asynchronous channel.
+- mcp — an interoperable MCP channel.
+
+Queue is the default even when type is omitted.
+
+## Queue channels
+
+A queue channel SHOULD define only the guarantees that the runtime can actually provide.
+
+Common properties include:
+
+- delivery: at-most-once, at-least-once, or exactly-once where genuinely supported;
+- ordering: whether message order is significant;
+- retry policy;
+- dead-letter policy;
+- visibility or lease duration;
+- idempotency requirements.
+
+The specification does not mandate a particular queue technology.
+
+## MCP channels
+
+An MCP channel binds the Agent boundary to an MCP server. MCP remains authoritative for MCP protocol semantics, capabilities, authorization, and lifecycle.
+
+A runtime MAY map long-running MCP work to an internal Queue. The mapping must preserve correlation, authorization, and result semantics.
+
+## Why MCPQ
+
+Traditional MCP usage is often described as request → response.
+
+Agents also need:
+
+- background execution;
+- retries;
+- delayed work;
+- human approval;
+- fan-out;
+- event-driven activation;
+- durable handoff;
+- recovery after process or connection failure.
+
+MCPQ makes communication an explicit Agent capability rather than treating every interaction as a synchronous tool call.
+
+## Failure isolation
+
+A broken channel MUST NOT disable independent channels or Actions when the runtime can isolate the failure.
+
+Authentication and authorization failures are runtime failures, not reasons to treat every other channel as invalid.

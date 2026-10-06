@@ -1,51 +1,74 @@
 ---
-title: Agent Plugins
-description: A portable package format for reusable components that extend AI agents.
+title: Agent Behavior
+description: A portable execution model for Agents with behavioral skills, Actions, persistent knowledge, and MCPQ channels.
 ---
 
-Agent Plugins is an open, vendor-neutral standard for packaging reusable components into portable plugins. Its version 1.0.0 specification defines a shared format for [Agent Skills](https://agentskills.io/specification) and [MCP servers](https://modelcontextprotocol.io/specification) that compatible clients can discover and load consistently.
+Agent Behavior defines a portable unit of executable agent behavior.
 
-## Why Agent Plugins?
+The primary unit is an Agent, not a plugin. An Agent is an Actor with an identity, a behavioral SKILL.md, executable Actions, persistent knowledge, and communication channels. The format is designed to be portable across runtimes while remaining explicit about what is normative and what belongs to a particular client.
 
-AI agent clients have developed their own plugin formats, even when plugins contain the same underlying components. Authors must rearrange or duplicate those components for each client, so a plugin packaged for one client may need adaptation before another can use it.
+## Why this specification exists
 
-Agent Plugins defines a small interoperability floor for the parts that can be portable across clients. Shared components can use one predictable structure, while distribution, installation, permissions, user experience, and client-specific capabilities remain under each client's control.
+Agent Skills solved an important packaging problem: reusable expertise can be represented as a directory containing SKILL.md, scripts, references, and assets. Agent Plugins extended that idea by defining a portable package containing Skills and MCP servers.
 
-## The portable package
+Those specifications describe valuable primitives, but they do not define the complete semantic unit of an executable Agent.
 
-An Agent Plugin is a directory with a required manifest and optional components in fixed locations:
+Agent Behavior makes the Agent itself the unit of composition:
 
-```text
-my-plugin/
-├── plugin.json
-├── skills/
-│   └── summarize/
-│       ├── SKILL.md
-│       ├── scripts/
-│       └── references/
-├── mcp.json
-└── com.example.client/
-    └── hooks/
-```
+    Agent
+    ├── SKILL.md              # Agent-level behavior
+    ├── actions/              # Executable capabilities
+    │   └── <action>/SKILL.md
+    ├── knowledge/            # Evidence, wiki, evolution state
+    └── mcpq.json             # Communication channels
 
-- `plugin.json` identifies the plugin and the Agent Plugins version it targets.
-- `skills/` contains Agent Skills in the format defined by the Agent Skills specification.
-- `mcp.json` describes stdio, Streamable HTTP, or legacy HTTP+SSE MCP servers.
-- Reverse-domain extension namespaces let individual clients add behavior without changing the portable core.
+## The semantic distinction
 
-## Open development
+An Agent Skill is a portable resource that teaches an agent how to perform a capability.
 
-Agent Plugins is openly licensed and developed in public. Its initial Technical Steering Committee includes Core Maintainers from Amazon, Cursor, Microsoft, OpenAI, and Vercel.
+An Agent Behavior Skill is the behavioral contract of an Agent or Action: the durable description of how that execution unit should behave, decide, recover, and interact.
 
-Proposals and technical decisions are public, and participation is open to the broader ecosystem. Use [GitHub Discussions](https://github.com/agentplugins/agent-plugins-spec/discussions) for asynchronous collaboration on ideas for new features and material changes, where proposals can establish a concrete portability need and implementer support. When synchronous collaboration on the standard is useful, join the [Agent Plugins Discord](https://discord.gg/692jE8wsmj).
+The same SKILL.md mechanics are intentionally reused where possible, but the semantic role is different.
 
-Explore the specification, schemas, governance, and contribution process in the [Agent Plugins specification repository](https://github.com/agentplugins/agent-plugins-spec).
+Agent = Actor and execution identity.
 
-## Choose your path
+SKILL.md = behavioral definition of that Agent or Action.
+
+Action = executable capability exposed by the Agent.
+
+Knowledge = persistent experience and learned knowledge, kept separate from the active behavioral instructions.
+
+MCPQ = channel boundary for Agent communication; Queue is the default mode, with MCP available as an interoperable protocol mode.
+
+## What is incorporated
+
+The specification is deliberately cumulative:
+
+- Agent Skills contributes the portable SKILL.md format and progressive disclosure model.
+- Agent Plugins contributes portable package discovery, manifests, fixed component locations, MCP configuration, and narrow failure isolation.
+- WikiSkill contributes the separation of raw experience, persistent wiki knowledge, executable skills, proposal loops, and validation-gated promotion.
+- This specification adds Agent identity, Action semantics, Agent-level Skills, explicit knowledge lifecycle, MCPQ channels, and runtime-oriented composition.
+
+It is therefore best understood as a semantic superset in scope, rather than a claim that every external implementation detail is reproduced byte-for-byte.
+
+## Minimal Agent
+
+    sales-agent/
+    ├── agent.json
+    ├── SKILL.md
+    ├── actions/
+    │   └── create-order/
+    │       └── SKILL.md
+    └── mcpq.json
+
+The runtime reads the manifest, loads the Agent Skill, discovers Actions, and establishes the declared MCPQ channels. Missing optional components do not invalidate independently valid components.
+
+## Choose a path
 
 <Cards>
-  <Card title="Build a plugin" href="/plugin-authors/build-an-agent-plugin" description="Create a portable package with skills and MCP servers." />
-  <Card title="Implement a client" href="/client-implementers/implement-an-agent-plugins-client" description="Load, validate, and run Agent Plugins safely." />
-  <Card title="Read the specification" href="/specification" description="Consult the complete normative specification." />
-  <Card title="Browse the schemas" href="/schemas" description="Use the canonical plugin and MCP JSON Schemas." />
+  <Card title="Build an Agent" href="/agent-authors/build-an-agent" description="Create an Agent package with an Agent Skill, Actions, knowledge, and MCPQ channels." />
+  <Card title="Understand Actions" href="/agent-authors/actions" description="Map Agent Skills into the Action model without losing portability." />
+  <Card title="Configure MCPQ" href="/agent-authors/mcpq" description="Define queue-first communication channels and optional MCP bindings." />
+  <Card title="Implement a runtime" href="/runtime-implementers/implement-agent-runtime" description="Discover, validate, execute, and isolate Agent components." />
+  <Card title="Read the specification" href="/specification" description="Read the normative Agent Behavior contract." />
 </Cards>

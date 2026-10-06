@@ -1,14 +1,16 @@
 ---
 title: JSON Schemas
-description: Canonical machine-readable schemas for Agent Plugins manifests and MCP configuration.
+description: Canonical machine-readable schemas for Agent manifests and MCPQ channel configuration.
 type: reference
 ---
 
-Agent Plugins publishes separate JSON Schemas for the plugin manifest and MCP server configuration. Clients use each canonical `$schema` identifier to select locally supported validation and interpretation rules; they do not retrieve schemas while loading a plugin.
+Agent Behavior publishes separate JSON Schemas for the Agent manifest and MCPQ configuration.
 
 <Cards>
-  <Card title="Plugin manifest schema" href="/schemas/1.0.0/plugin.schema.json" description="Validate the root plugin.json manifest." />
-  <Card title="MCP configuration schema" href="/schemas/1.0.0/mcp.schema.json" description="Validate the root mcp.json document and individual server entries." />
+  <Card title="Agent manifest schema" href="/schemas/1.0.0/agent.schema.json" description="Validate the root agent.json manifest." />
+  <Card title="MCPQ schema" href="/schemas/1.0.0/mcpq.schema.json" description="Validate queue-first Agent communication channels." />
 </Cards>
 
-The [specification](/specification) is authoritative if its requirements conflict with a machine-readable schema.
+The specification is authoritative if its requirements conflict with a machine-readable schema.
+
+Schema identifiers are immutable once published. This draft uses the repository URL as its canonical identifier until the specification has a dedicated public domain.

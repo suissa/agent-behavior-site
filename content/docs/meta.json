@@ -2,10 +2,10 @@
   "pages": [
     "index",
     "compatible-clients",
-    "---For Plugin Authors---",
-    "...plugin-authors",
-    "---For Client Implementers---",
-    "...client-implementers",
+    "---For Agent Authors---",
+    "...agent-authors",
+    "---For Runtime Implementers---",
+    "...runtime-implementers",
     "---Reference---",
     "specification",
     "schemas"

@@ -1,644 +1,434 @@
 ---
-title: Agent Plugins Specification
-description: The complete normative contract for portable Agent Plugin packages and conformant clients.
+title: Agent Behavior Specification
+description: Normative contract for portable executable Agents, Actions, knowledge, and MCPQ channels.
 type: reference
 ---
 
-**Spec Version: 1.0.0**
+Specification Version: 1.0.0-draft
 
-**Status: Published**
+Status: Working Draft
 
-This document defines the canonical Agent Plugins Specification v1.0.0 for packaging reusable components that extend AI agents into distributable plugins.
+This document defines the Agent Behavior package model. It is intentionally compatible with the portable portions of Agent Skills and Agent Plugins, while introducing a different semantic center: the Agent is an executable Actor rather than a package of unrelated extensions.
 
-## Table of contents
+## 1. Status and conformance
 
-1. [Status and version](#1-status-and-version)
-2. [Conformance language](#2-conformance-language)
-3. [Terminology](#3-terminology)
-4. [Plugin package model](#4-plugin-package-model)
-5. [Manifest](#5-manifest)
-6. [Component discovery](#6-component-discovery)
-7. [Component types](#7-component-types)
-8. [Client extensions](#8-client-extensions)
-9. [Environment variables and placeholder expansion](#9-environment-variables-and-placeholder-expansion)
-10. [Versioning](#10-versioning)
-11. [Client conformance](#11-client-conformance)
+The specification uses MUST, MUST NOT, REQUIRED, SHOULD, SHOULD NOT, and MAY as normative terms according to RFC 2119 and RFC 8174.
 
-**Non-normative material**
+A conformant runtime MUST implement the package boundary, manifest validation, Agent Skill discovery, Action discovery, and failure isolation rules applicable to the components it supports.
 
-- [Appendix A: Conformance Checklist](#appendix-a-conformance-checklist)
-- [Design Decisions](#design-decisions)
+The specification is a working draft. The schemas in this repository are normative only for the corresponding draft revision and MUST NOT be treated as an established industry standard.
 
-## 1. Status and version
+## 2. Design lineage
 
-This specification defines version `1.0.0` of the Agent Plugins format.
+Agent Behavior incorporates four layers of prior work.
 
-Clients and plugin packages claiming conformance to Agent Plugins v1 MUST implement or follow the requirements in this document.
+### 2.1 Agent Skills
 
-### 1.1 Governance model
+Agent Skills defines a portable directory centered on SKILL.md, with YAML frontmatter and optional scripts, references, and assets. Progressive disclosure allows metadata to be discovered before the full instructions and resources are loaded.
 
-Governance for the Agent Plugins project is defined separately from the portable package format in the [Technical Charter](https://github.com/agentplugins/agent-plugins-spec/blob/main/GOVERNANCE.md).
+Agent Behavior reuses this file-level contract wherever practical. The semantic role changes: an Agent's SKILL.md describes the Agent's durable behavior, while an Action's SKILL.md describes the behavior required to execute that Action.
 
-## 2. Conformance language
+### 2.2 Agent Plugins
 
-In the normative sections of this document, the key words MUST, MUST NOT, REQUIRED, SHOULD, SHOULD NOT, RECOMMENDED, MAY, and OPTIONAL are to be interpreted as described in RFC 2119 and RFC 8174 when, and only when, they appear in all capitals.
+Agent Plugins 1.0 defines a directory package with a manifest, fixed component locations, Agent Skills, MCP server configuration, extension namespaces, and narrow failure boundaries.
 
-Appendix A and Design Decisions are non-normative. All other sections are normative.
+Agent Behavior retains these interoperability principles but changes the package root from a generic Plugin to an Agent. The portable component locations become SKILL.md, actions/, knowledge/, and mcpq.json.
+
+### 2.3 WikiSkill
+
+WikiSkill demonstrates a three-layer learning architecture: raw execution experience, a persistent knowledge wiki, and executable skills. Its evolution loop uses experience to propose skill changes and keeps a candidate only when an objective validation score strictly improves.
+
+Agent Behavior adopts this separation as a first-class knowledge lifecycle. A runtime MUST NOT silently turn raw experience into active behavior. Promotion MUST pass the configured validation policy.
+
+### 2.4 MCP and asynchronous execution
+
+MCP supplies interoperable tool and resource communication. Modern MCP work also provides durable task primitives for long-running operations.
+
+Agent Behavior introduces MCPQ as the Agent-level channel abstraction. Its default channel mode is a Queue, because Agent execution is not inherently a request/response interaction.
 
 ## 3. Terminology
 
-| Term                | Meaning                    | Description                                                                                                                          |
-| ------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Plugin              | Package unit              | A self-contained directory with a manifest and optional components.                                                                  |
-| Plugin root         | Filesystem root           | The top-level directory of a plugin package.                                                                                         |
-| Manifest            | Metadata document         | A `plugin.json` file at the plugin root.                                                                                             |
-| Component           | Plugin-provided unit      | A skill or MCP server entry supplied through a component type standardized by this specification.                                    |
-| Client              | Plugin runtime            | A tool that discovers, installs, loads, and executes plugin components.                                                              |
-| Extension namespace | Client-owned identifier   | A reverse-domain identifier used for client-specific manifest data, a client-specific top-level directory, or both.                  |
-| Extension directory | Client-owned file root    | A top-level directory whose name is exactly an extension namespace and whose contents are defined by that namespace's owning client. |
+| Term | Meaning |
+| --- | --- |
+| Agent | Executable Actor described by an Agent package. |
+| Agent Skill | Behavioral SKILL.md attached to an Agent. |
+| Action | A named executable capability of an Agent, represented by an Action directory and its SKILL.md. |
+| Knowledge | Persistent evidence, wiki knowledge, proposals, and evolution state. |
+| MCPQ | Agent communication channel abstraction combining queue-oriented delivery with optional MCP interoperability. |
+| Queue | Default MCPQ channel mode for asynchronous Agent communication. |
+| Runtime | Host that discovers, validates, loads, executes, and isolates Agents. |
+| Evidence | Immutable or append-only execution observations used by the knowledge lifecycle. |
+| Wiki | Persistent, curated knowledge derived from evidence. |
+| Proposal | Candidate change to an Agent Skill or Action Skill. |
+| Validation gate | Objective or policy-controlled test that decides whether a proposal may become active. |
+| Actor | Runtime identity responsible for executing an Agent. |
 
-## 4. Plugin package model
+## 4. Agent package model
 
-### 4.1 General requirements
+An Agent is a filesystem package rooted at one directory.
 
-1. A plugin is a directory rooted at a single filesystem location.
-2. A plugin MUST include a manifest at `plugin.json` in the plugin root.
-3. When a client discovers, reads, or executes a file or directory supplied by the plugin package, the filesystem-resolved path MUST remain within the filesystem-resolved plugin root. Symlinks, junctions, reparse points, and equivalent filesystem mechanisms MAY resolve to targets within the plugin root, but clients MUST reject package paths that resolve outside it.
-4. A configuration field defined by this specification as a plugin-relative path MUST begin with `./`, be resolved against the plugin root, and remain within the filesystem-resolved plugin root after resolution.
-5. Configuration values not defined as paths, including command arguments and environment variable values, are opaque strings. Clients MUST NOT interpret them as package paths for the purpose of enforcing this section.
+A complete package MAY contain:
 
-Example: valid and invalid relative paths
+    agent-name/
+    ├── agent.json                 # REQUIRED
+    ├── SKILL.md                   # REQUIRED
+    ├── actions/                   # OPTIONAL
+    │   └── action-name/
+    │       ├── SKILL.md           # REQUIRED for each Action
+    │       ├── scripts/           # OPTIONAL
+    │       ├── references/        # OPTIONAL
+    │       └── assets/            # OPTIONAL
+    ├── knowledge/                 # OPTIONAL
+    │   ├── evidence/
+    │   ├── wiki/
+    │   └── evolution/
+    ├── mcpq.json                  # OPTIONAL
+    ├── LICENSE
+    └── CHANGELOG.md
 
-```json
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-  "mcpServers": {
-    "server": {
-      "type": "stdio",
-      "command": "./bin/server",
-      "cwd": "./data"
-    }
-  }
-}
-```
+The runtime MUST resolve package paths within the filesystem-resolved Agent root. Symlinks, junctions, and equivalent mechanisms MUST NOT allow package configuration to escape the Agent root.
 
-```json
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-  "mcpServers": {
-    "server": {
-      "type": "stdio",
-      "command": "../bin/server",
-      "cwd": "data"
-    }
-  }
-}
-```
-
-The first example is valid — both paths start with `./` and stay within the plugin root. The second is invalid — `../bin/server` escapes the plugin root and `data` is not a plugin-relative path.
-
-These containment rules govern access to files supplied by the plugin package. They do not sandbox a plugin subprocess or restrict paths supplied at runtime. §7.2.1 separately defines containment for a configured working directory rooted in the client-managed `PLUGIN_DATA` directory.
-
-When a path fails a containment requirement, the client MUST apply the narrowest applicable failure boundary:
-
-1. If `plugin.json` does not resolve within the plugin root, the client MUST reject the plugin.
-2. If a fixed component location does not resolve within the plugin root, the client MUST treat that component type as invalid under §6.2.
-3. If a discovered `SKILL.md` does not resolve within the plugin root, the client MUST skip that skill under §7.1.
-4. If an MCP server `command` or `cwd` fails containment, the client MUST treat that server entry as invalid under §7.2.2.
-5. For any other package path that resolves outside the plugin root, the client MUST deny access to that path.
-
-### 4.2 Standard layout
-
-A plugin that has skills, MCP servers, and a client extension can have the following layout:
-
-```text
-my-plugin/
-├── plugin.json
-├── skills/
-│   └── summarize/
-│       ├── SKILL.md
-│       ├── scripts/
-│       │   └── analyze.sh
-│       └── references/
-│           └── checklist.md
-├── mcp.json
-├── com.example.client/
-│   └── hooks/
-├── LICENSE
-└── CHANGELOG.md
-```
-
-> **See also:** [§5 Manifest](#5-manifest) for manifest rules, [§6 Component discovery](#6-component-discovery) for fixed component locations and missing-location behavior, and [§8 Client extensions](#8-client-extensions) for client extension conventions.
+The Agent root is the trust and discovery boundary. Runtime sandboxing is a separate concern and is not implied by this filesystem rule.
 
 ## 5. Manifest
 
-### 5.1 Location and loading
+The root manifest MUST be agent.json.
 
-Clients MUST check for a manifest at `plugin.json` in the plugin root.
+It MUST be a JSON object containing:
 
-The Agent Plugins core specification defines exactly one portable manifest per plugin. No other file can replace, supplement, or override the core fields in root `plugin.json`.
+- $schema
+- name
+- version
 
-A client loads and validates root `plugin.json` before discovering components or applying client-specific behavior.
+It MAY additionally contain description, author, homepage, repository, license, keywords, runtime, extensions, and other fields explicitly standardized by a future specification revision.
 
-> **See also:** [§11 Client conformance](#11-client-conformance) for requirements around supporting `plugin.json`.
-
-### 5.2 Manifest object
-
-The manifest MUST be JSON and MUST contain a top-level object. Its schema is closed: the only permitted top-level fields are `$schema`, `name`, `version`, `description`, `author`, `homepage`, `repository`, `license`, `keywords`, and `extensions`.
-
-If `plugin.json` contains any other top-level field, it does not conform to the schema. Clients MUST report and ignore each unknown field and MUST continue loading the plugin if the manifest otherwise satisfies this section. Clients MUST NOT assign semantics to unknown fields. Client-specific manifest data belongs under `extensions` as defined in §8.
-
-A non-object `extensions` field is handled as defined in §8.1. Every permitted field otherwise MUST match the type and constraints defined below. Any schema violation other than an unknown top-level field or a non-object `extensions` field is fatal: the client MUST reject the plugin and MUST NOT discover or execute any of its components.
-
-The official machine-readable schema is [`schemas/1.0.0/plugin.schema.json`](../schemas/1.0.0/plugin.schema.json). The specification text is authoritative if it conflicts with the schema.
-
-The required `$schema` field identifies the Agent Plugins specification version targeted by the plugin and its corresponding manifest schema. For Agent Plugins 1.0.0, its value MUST be the canonical identifier `https://agent-plugins.org/schemas/1.0.0/plugin.schema.json`.
-
-Clients MUST use a recognized `$schema` value to select locally supported manifest validation and interpretation rules. A client MAY map multiple canonical identifiers to the same implementation only when it explicitly recognizes those Agent Plugins versions as compatible. Clients MUST NOT retrieve a schema while loading a plugin. If a client does not support the declared Agent Plugins version or an explicitly recognized compatible version, it MUST reject the plugin and SHOULD report the unsupported version.
-
-Example: minimal manifest
-
-```json
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "minimal-plugin"
-}
-```
-
-Example: full manifest
-
-```json
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "plugin-name",
-  "version": "1.2.0",
-  "description": "Brief plugin description",
-  "author": {
-    "name": "Author Name",
-    "email": "author@example.com",
-    "url": "https://example.com"
-  },
-  "homepage": "https://docs.example.com/plugin",
-  "repository": "https://github.com/example/plugin",
-  "license": "MIT",
-  "keywords": ["keyword1", "keyword2"],
-  "extensions": {
-    "com.example.client": {
-      "setting": true
-    }
-  }
-}
-```
-
-### 5.3 Required fields
-
-| Field     | Type   | Description                                                  |
-| --------- | ------ | ------------------------------------------------------------ |
-| `$schema` | string | Canonical plugin manifest schema identifier defined in §5.2. |
-| `name`    | string | Human-readable plugin name.                                  |
-
-If a required field is missing, has the wrong type, is empty, or otherwise violates its requirements, the manifest is invalid. Clients MUST reject the plugin and MUST NOT discover or execute any of its components. Clients SHOULD report which required field is invalid.
-
-### 5.4 Metadata fields
-
-| Field         | Type     | Description                                                           |
-| ------------- | -------- | --------------------------------------------------------------------- |
-| `version`     | string   | Version string (Semantic Versioning RECOMMENDED). Used for update checks and cache freshness. |
-| `description` | string   | Short description of plugin purpose.                                  |
-| `author`      | object   | Author object with optional `name`, `email`, and `url` string fields. |
-| `homepage`    | string   | Documentation or homepage URL.                                        |
-| `repository`  | string   | Source repository URL.                                                |
-| `license`     | string   | License identifier (SPDX identifier RECOMMENDED).                     |
-| `keywords`    | string[] | Search and discovery tags.                                            |
-
-The `author` object MAY contain only the `name`, `email`, and `url` fields, each with a string value. Any other field or value type makes the manifest invalid.
-
-Except where this specification states an explicit constraint, metadata fields are validated only by their JSON types. Clients MUST NOT reject a manifest solely because `version` is not valid Semantic Versioning; `homepage`, `repository`, or `author.url` is not a recognized URL; `author.email` is not a recognized email address; or `license` is not an SPDX identifier.
-
-### 5.5 Plugin name constraints
-
-The manifest `name` value MUST satisfy all of the following:
-
-| Constraint    | Requirement            | Description                                                   |
-| ------------- | ---------------------- | ------------------------------------------------------------- |
-| Length        | 1-64 characters        | The name MUST be between 1 and 64 characters inclusive.       |
-| Character set | `a-z`, `0-9`, `-`, `.` | Lowercase alphanumeric characters, hyphens, and periods only. |
-| Start and end | Alphanumeric           | The first and last characters MUST be alphanumeric.           |
-| Repetition    | No `--` or `..`        | Consecutive hyphens and consecutive periods are not allowed.  |
-
-Periods are allowed in plugin names.
-
-Valid names: `my-plugin`, `acme.tools`, `lint3r`, `a`
-
-Invalid names: `My-Plugin` (uppercase), `-start` (leading hyphen), `has--double` (consecutive hyphens), `too.many..dots` (consecutive periods), `` (empty)
-
-### 5.6 Extensions field
-
-The optional `extensions` field contains client-specific manifest data keyed by extension namespace. See §8 for processing rules.
-
-## 6. Component discovery
-
-> **See also:** [§4 Plugin package model](#4-plugin-package-model) for directory layout conventions.
-
-### 6.1 Fixed locations
-
-Clients MUST discover each supported component type from its fixed location. `plugin.json` cannot override these locations or contain inline component configuration.
-
-Component locations:
-
-| Component type | Fixed location     | Pattern                              |
-| ------------- | ------------------ | ------------------------------------ |
-| Skills        | `skills/`          | Subdirectories containing `SKILL.md` |
-| MCP servers   | `mcp.json`         | JSON configuration                   |
-
-Example: given a plugin `reports-plugin` with this layout:
-
-```text
-reports-plugin/
-├── plugin.json
-├── skills/summarize/SKILL.md
-└── mcp.json
-```
-
-The client discovers skill `summarize` from `skills/` and MCP servers from `mcp.json`.
-
-### 6.2 Missing locations
-
-If a fixed component location is absent, the client MUST NOT treat that as an error.
-
-If a fixed component location is present but does not resolve to the expected filesystem kind — for example, `skills` does not resolve to a directory or `mcp.json` does not resolve to a regular file — the client MUST treat that component type as invalid and continue loading other supported component types.
-
-## 7. Component types
-
-> **See also:** [§6 Component discovery](#6-component-discovery) for how component files are located.
-
-Agent Plugins v1 defines exactly two component types: **skills** and **MCP servers**. Other component types are outside the v1 format and do not affect conformance.
-
-Clients MUST ignore component types they do not support.
-
-### 7.1 Skills
-
-Agent Skills MUST conform to the [Agent Skills specification](https://agentskills.io/specification). That specification is the source of truth for the `SKILL.md` format, frontmatter fields, and directory layout (`scripts/`, `references/`, `assets/`).
-
-This specification defines how Agent Skills are *discovered* within a plugin, not the skill format itself or how clients expose skills to users or models.
-
-The fixed discovery location is `skills/`. Each immediate child directory containing a path named exactly `SKILL.md` that resolves to a regular file is treated as one skill. Clients MUST NOT recursively search deeper descendants for additional skills.
-
-If a discovered skill does not conform to the Agent Skills specification, the client MUST skip that skill and continue loading other skills and component types. The client SHOULD report the invalid skill.
-
-Example: a skill directory named `deploy` inside `skills/`:
-
-```text
-skills/
-└── deploy/
-    ├── SKILL.md          # name: deploy
-    ├── scripts/
-    │   └── rollback.sh
-    └── references/
-        └── runbook.md
-```
-
-### 7.2 MCP servers
-
-The [Model Context Protocol specification](https://modelcontextprotocol.io/specification) defines MCP wire behavior and lifecycle semantics. Agent Plugins defines the `mcp.json` configuration format used to locate and connect to MCP servers in a plugin. Clients map this portable format to their native configuration; its field names and values need not match a client-native format.
-
-#### 7.2.1 Discovery and configuration
-
-The MCP configuration path is `mcp.json` at the plugin root. MCP configuration MUST NOT be declared inline in `plugin.json` or loaded from any alternative core path.
-
-`mcp.json` MUST be a JSON object containing the required `$schema` and `mcpServers` fields, with no other top-level fields. `mcpServers` MUST be an object whose member names identify servers and whose member values are server configuration objects. An empty `mcpServers` object is valid.
-
-The official machine-readable schema is [`schemas/1.0.0/mcp.schema.json`](../schemas/1.0.0/mcp.schema.json). The specification text is authoritative if it conflicts with the schema. The schema exposes `#/$defs/server` so that clients can validate each server independently and preserve the failure boundaries in §7.2.2.
-
-The required `$schema` field identifies the Agent Plugins specification version targeted by the MCP configuration and its corresponding MCP schema. For Agent Plugins 1.0.0, its value MUST be the canonical identifier `https://agent-plugins.org/schemas/1.0.0/mcp.schema.json`.
-
-Clients MUST use a recognized `$schema` value to select locally supported MCP configuration validation and interpretation rules. A client MAY map multiple canonical identifiers to the same implementation only when it explicitly recognizes those Agent Plugins versions as compatible. Clients MUST NOT retrieve a schema while loading a plugin.
-
-Each server configuration MUST contain a `type` field and match exactly one of the closed variants below. An unknown field, an unknown `type` value, or a field belonging to another variant makes that server entry invalid.
-
-##### stdio
-
-| Field     | Type              | Required | Description                                      |
-| --------- | ----------------- | -------- | ------------------------------------------------ |
-| `type`    | `"stdio"`         | Yes      | Selects the MCP stdio transport.                 |
-| `command` | string            | Yes      | Executable token to launch.                      |
-| `args`    | string[]          | No       | Arguments passed to the executable.              |
-| `env`     | object of strings | No       | Environment variables supplied to the process.   |
-| `cwd`     | string            | No       | Working directory for the process.               |
-
-The `command` field MUST contain a single executable token, not a shell command string. It MUST be either a bare executable name or a plugin-relative path beginning with `./`. Clients MUST resolve bare names using the platform's executable search rules and MUST resolve plugin-relative paths against the plugin root. Clients MUST NOT perform placeholder expansion in `command`.
-
-Whether a configured `PATH` environment value participates in resolving a bare `command` is client-defined. Plugins claiming conformance MUST NOT depend on that behavior. A plugin that bundles an executable in the package MUST use a plugin-relative `command`.
-
-Clients MAY use a platform-specific command interpreter when required to launch the resolved executable, such as a `.bat` or `.cmd` script on Windows, but MUST preserve `command` as one token and pass `args` separately.
-
-When `cwd` is omitted, clients MUST use the plugin root as the subprocess working directory. When present, `cwd` MUST have one of these forms:
-
-1. A plugin-relative path beginning with `./`.
-2. Exactly `${PLUGIN_ROOT}` or a path beginning with `${PLUGIN_ROOT}/`.
-3. Exactly `${PLUGIN_DATA}` or a path beginning with `${PLUGIN_DATA}/`.
-
-Clients MUST expand placeholders before resolving `cwd`. A plugin-relative or `${PLUGIN_ROOT}`-rooted value MUST remain within the filesystem-resolved plugin root. A `${PLUGIN_DATA}`-rooted value MUST remain within the filesystem-resolved plugin data directory. Any other form or any post-resolution escape makes that server entry invalid under §7.2.2.
-
-The `args`, `env`, and `cwd` fields in a stdio server configuration MUST support `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` expansion.
-
-##### Streamable HTTP and legacy HTTP+SSE
-
-| Field     | Type                          | Required | Description                                                       |
-| --------- | ----------------------------- | -------- | ----------------------------------------------------------------- |
-| `type`    | `"streamable-http"` or `"sse"` | Yes      | Selects the remote MCP transport.                                 |
-| `url`     | string                        | Yes      | MCP endpoint URL.                                                 |
-| `headers` | object of strings             | No       | Fixed HTTP headers sent when connecting to the configured origin. |
-
-`streamable-http` selects the current MCP Streamable HTTP transport. `sse` selects the deprecated HTTP+SSE transport defined by the [MCP 2024-11-05 specification](https://modelcontextprotocol.io/specification/2024-11-05/basic/transports); it does not refer to SSE responses or streams used within Streamable HTTP.
-
-The `url` value MUST be an absolute HTTP or HTTPS URL and MUST NOT contain user information or a fragment. Non-loopback endpoints MUST use HTTPS. HTTP MAY be used when the URL host is exactly `localhost` or an IP literal in a loopback range.
-
-Header names and values MUST be valid HTTP header fields. Header names are case-insensitive; an entry containing the same header name more than once under different casing is invalid. Clients MUST NOT perform placeholder or environment-variable expansion in `url`, header names, or header values.
-
-Header values are visible package data, not a portable secret mechanism. Plugins MUST NOT embed credentials or other secrets in `headers`. Headers generated by the client to implement HTTP, MCP, or authorization take precedence over configured headers with the same case-insensitive name. A client MUST NOT forward configured headers to a different origin through a redirect or legacy SSE endpoint event without explicit user authorization.
-
-Agent Plugins v1 defines no OAuth configuration or portable credential-reference fields. Authorization discovery, user interaction, and credential storage are client-managed. An authorization failure is a connection failure for that server, not invalid plugin configuration.
-
-##### Transport support
-
-A client that supports Agent Plugins MCP servers MUST support at least one of `stdio` or `streamable-http` and SHOULD support both. Support for `sse` is OPTIONAL. A client MUST use the transport declared by `type` for its initial connection attempt. Agent Plugins does not define fallback behavior if that attempt fails.
-
-Example: `mcp.json`
-
-```json
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-  "mcpServers": {
-    "local-validator": {
-      "type": "stdio",
-      "command": "./bin/validator",
-      "args": ["--data", "${PLUGIN_DATA}/validator"],
-      "env": {
-        "CONFIG": "${PLUGIN_ROOT}/config.json"
-      },
-      "cwd": "${PLUGIN_ROOT}"
-    },
-    "deployment-api": {
-      "type": "streamable-http",
-      "url": "https://deploy.example.com/mcp",
-      "headers": {
-        "X-Tenant": "public-tenant"
-      }
-    },
-    "legacy-events": {
-      "type": "sse",
-      "url": "https://legacy.example.com/sse"
-    }
-  }
-}
-```
-
-#### 7.2.2 Loading rules
-
-1. Clients that support MCP servers MUST load configuration only from `mcp.json` at the plugin root.
-2. If `mcp.json` is not valid JSON, targets an Agent Plugins version for which the client has no supported or explicitly recognized compatible version, targets a different Agent Plugins version than `plugin.json`, or does not satisfy the other top-level requirements in §7.2.1, the client MUST disable MCP for that plugin and continue loading other component types. The client SHOULD report the invalid, unsupported, or mismatched configuration.
-3. If an individual server entry does not satisfy the requirements in §7.2.1, the client MUST skip that server and continue loading other servers and component types. The client SHOULD report the invalid entry.
-4. If the client does not support the transport declared by an otherwise valid server entry, it MUST skip that server and continue loading other servers and component types. The client SHOULD report the unsupported transport.
-5. If a server fails to start, connect, authenticate, or complete the MCP handshake, the client MUST continue loading other servers and component types. The client SHOULD report the connection failure.
-
-## 8. Client extensions
-
-Client-specific manifest data MUST be represented under a reverse-domain namespace in `extensions`. Client-specific files MUST be represented under a top-level directory named for that namespace. A client MAY use either representation or both.
-
-A client SHOULD base its namespace on a domain name it controls and SHOULD keep the namespace stable. For example, a client that controls `example.com` could use `com.example.client`.
-
-Agent Plugins assigns no portable discovery, validation, loading, or failure semantics to client extension data or files. Each client defines the contents and behavior of its own namespace, including how its manifest data and directory contents relate.
-
-### 8.1 Manifest extension data
-
-The optional `extensions` field in `plugin.json` MUST be an object whose member names are client extension namespaces and whose member values are objects.
+Unknown top-level fields SHOULD be reported and ignored when the manifest is otherwise valid. A malformed required field is fatal to the Agent package.
 
 Example:
 
-```json
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "example-plugin",
-  "extensions": {
-    "com.example.client": {
-      "setting": true
+    {
+      "$schema": "https://github.com/suissa/agent-behavior-site/blob/main/public/schemas/1.0.0/agent.schema.json",
+      "name": "sales-agent",
+      "version": "1.0.0",
+      "description": "Handles order creation and customer follow-up."
     }
-  }
-}
-```
 
-If `extensions` is not an object, the client MUST report and ignore the field and continue loading components. A client MUST ignore manifest entries for namespaces it does not implement without validating the contents of their values. Validation and failure handling within an implemented namespace are defined by that client.
+The manifest identifies the Agent. It MUST NOT inline the Agent Skill, Action definitions, or MCPQ configuration. Those components have fixed locations.
 
-### 8.2 Extension directories
+## 6. Agent Skill
 
-The extension directory for a namespace is the top-level directory named after it. For example, files for `com.example.client` belong in `com.example.client/`.
+The root SKILL.md is REQUIRED.
 
-Example: a file-only client extension
+It follows the Agent Skills file mechanics:
 
-```text
-my-plugin/
-├── plugin.json
-├── skills/
-│   └── summarize/
-│       └── SKILL.md
-└── com.example.client/
-    └── hooks/
-        └── hooks.json
-```
+    ---
+    name: sales-agent
+    description: Handles sales interactions, validates order intent, and recovers safely from incomplete information.
+    ---
 
-A client that implements file-based behavior for a namespace MUST look for it in the corresponding top-level directory.
+    # Sales Agent
 
-## 9. Environment variables and placeholder expansion
+    Describe the durable behavior of the Agent.
 
-> **See also:** [§7.2 MCP servers](#72-mcp-servers) for the fields where plugin variable expansion applies, and [§4.1 General requirements](#41-general-requirements) for path safety rules.
+The name and description fields retain the portability constraints of Agent Skills. The body defines the Agent's behavioral contract.
 
-### 9.1 Subprocess environment
+The Agent Skill SHOULD describe:
 
-Clients that launch plugin subprocesses (i.e., stdio MCP servers) MUST provide `PLUGIN_ROOT` and `PLUGIN_DATA` in each subprocess environment. `PLUGIN_ROOT` is the absolute path to the filesystem-resolved plugin root. `PLUGIN_DATA` is the absolute path to a client-managed persistent data directory dedicated to that installed plugin instance.
+- intent and scope;
+- evidence the Agent should inspect;
+- decisions and invariants;
+- execution principles;
+- recovery behavior;
+- important failure modes;
+- escalation and human-healing boundaries.
 
-The client chooses the `PLUGIN_DATA` location. It MUST create the directory before launching a plugin subprocess, MUST make it writable to that subprocess, and MUST preserve its contents across plugin updates. The client MAY delete the directory when the plugin is uninstalled.
+An Agent Skill is not merely a prompt file. It is the durable behavioral definition from which runtime instructions, evaluations, documentation, and future Action behavior may be derived.
 
-Use `PLUGIN_DATA` for: installed dependencies (node_modules, virtual environments), generated code, caches, and other plugin state that should persist across updates. Use `PLUGIN_ROOT` for referencing bundled scripts, binaries, and config files that ship with the plugin.
+## 7. Actions
 
-The client chooses the base subprocess environment and MAY inherit, omit, or sanitize ambient variables. After placeholder expansion, entries in a stdio server's `env` object MUST overlay the base environment and replace same-name entries according to platform environment-name semantics. The client MUST then set `PLUGIN_ROOT` and `PLUGIN_DATA` to the values defined above, replacing any entries with equivalent names according to platform environment-name semantics.
+Actions are the executable capabilities of an Agent.
 
-Except for the platform executable search used to resolve a bare `command`, plugins claiming conformance MUST NOT depend on a base-environment variable unless this specification requires that variable or the server configuration supplies it explicitly.
+The fixed location is actions/. Each immediate child directory containing a valid SKILL.md is one Action.
 
-Example: a client loading the plugin `devtools` from `/home/alex/.agents/plugins/devtools` sets:
+Example:
 
-```text
-PLUGIN_ROOT=/home/alex/.agents/plugins/devtools
-PLUGIN_DATA=/home/alex/.agents/plugins/data/devtools
-```
+    actions/
+    ├── create-order/
+    │   ├── SKILL.md
+    │   └── references/
+    │       └── order-contract.md
+    └── cancel-order/
+        └── SKILL.md
 
-### 9.2 Placeholder expansion
+An Action Skill uses the same portable SKILL.md mechanics as Agent Skills, but its semantics are scoped to one executable capability.
 
-Clients that launch plugin subprocesses MUST expand `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` in supported configuration fields. Expansion is a single, non-recursive textual replacement of every exact occurrence of either placeholder. Text introduced by a replacement MUST NOT be scanned for further placeholders.
+An Action SHOULD specify:
 
-Expansion applies to every string element of `args`, every string value in `env`, and the `cwd` string. It does not apply to `env` keys, `command`, or fixed component locations.
+1. when the Action applies;
+2. required evidence and inputs;
+3. preconditions and invariants;
+4. decision logic;
+5. execution steps;
+6. postconditions and observable outputs;
+7. recovery and escalation;
+8. prohibited or unsafe outcomes.
 
-Unrecognized placeholder-like text MUST remain literal. Clients MUST NOT perform any other placeholder or environment-variable expansion.
+Actions MAY use scripts, references, and assets following Agent Skills conventions.
 
-Configured `env` values are visible package data, not a portable secret mechanism. Plugins MUST NOT embed credentials or other secrets in `env`.
+A runtime MUST NOT infer an Action merely from arbitrary files outside actions/.
 
-An MCP server's `env` object MUST NOT contain entries named `PLUGIN_ROOT` or `PLUGIN_DATA`. Such an entry makes that server configuration invalid under §7.2.2. Clients MUST supply the reserved environment variables themselves.
+## 8. Knowledge and evolution
 
-Example: plugin variable expansion in MCP
+Knowledge is intentionally separate from active Skills.
 
-```json
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-  "mcpServers": {
-    "database": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["--config", "${PLUGIN_ROOT}/config/db.json"],
-      "cwd": "${PLUGIN_ROOT}",
-      "env": {
-        "DATA_DIR": "${PLUGIN_DATA}/database"
+A recommended layout is:
+
+    knowledge/
+    ├── evidence/
+    │   └── <execution>.jsonl
+    ├── wiki/
+    │   ├── index.md
+    │   ├── patterns/
+    │   └── log.md
+    └── evolution/
+        ├── proposals/
+        ├── validations/
+        └── decisions/
+
+### 8.1 Evidence
+
+Evidence records what happened during execution. It SHOULD be append-only and SHOULD contain enough provenance to reconstruct the observation without exposing secrets or unnecessary personal data.
+
+### 8.2 Wiki
+
+The Wiki is persistent knowledge distilled from evidence: successful strategies, failure modes, root causes, constraints, counterexamples, and reusable patterns.
+
+The Wiki MUST NOT be treated as automatically active runtime instructions.
+
+### 8.3 Evolution
+
+A proposer MAY derive a candidate change to an Agent Skill or Action Skill from the Wiki and evidence.
+
+A candidate MUST be evaluated by the configured validation policy before activation when validation is required by the Agent manifest or runtime policy.
+
+The default promotion rule is:
+
+    candidate_score > best_score
+            => promote
+    otherwise
+            => reject active change
+            + retain evidence and proposal history
+
+A rejected proposal MUST NOT erase the knowledge that led to it. This preserves the central WikiSkill property that knowledge compounds even when a particular skill change does not.
+
+## 9. MCPQ channels
+
+MCPQ is the communication abstraction of an Agent.
+
+The root configuration is mcpq.json.
+
+A channel has a stable name and a mode. The default mode is queue.
+
+    {
+      "$schema": "https://github.com/suissa/agent-behavior-site/blob/main/public/schemas/1.0.0/mcpq.schema.json",
+      "channels": {
+        "orders": {
+          "type": "queue",
+          "delivery": "at-least-once"
+        },
+        "human-healing": {
+          "type": "queue"
+        }
       }
     }
-  }
-}
-```
 
-## 10. Versioning
+Queue mode is the default because an Agent is an asynchronous Actor: work can be accepted, retried, delayed, resumed, routed, or escalated without requiring the caller to keep a request open.
 
-### 10.1 Specification and schema versions
+MCP mode MAY be used where interoperability with an MCP server is required. The MCP protocol remains authoritative for MCP message and capability semantics.
 
-The version in §1 identifies the complete Agent Plugins specification release, including its normative text, plugin manifest schema, and MCP configuration schema. Every specification release MUST publish both schemas with the same version as the specification, even when a schema's validation rules are unchanged from the previous release.
+MCPQ does not redefine MCP. It defines where an Agent communicates and how work is delivered at the Agent boundary.
 
-A plugin's required `plugin.json` `$schema` value declares the Agent Plugins version that the package targets. When `mcp.json` is present, the version in its `$schema` value MUST match the version declared by `plugin.json`. A mismatch makes the MCP configuration invalid under §7.2.2 but does not invalidate other component types.
+### 9.1 Queue semantics
 
-A change to either schema requires a new specification release. Published canonical schema identifiers MUST NOT be reassigned to different schema contents. Existing plugins MAY continue targeting an older Agent Plugins version; clients determine support using the declared canonical identifiers and any explicit compatibility mappings.
+A Queue channel SHOULD define:
 
-### 10.2 Plugin versions
+- delivery semantics;
+- ordering requirements when relevant;
+- retry policy;
+- visibility or lease behavior;
+- dead-letter behavior;
+- correlation and causation identifiers;
+- idempotency requirements;
+- acknowledgement semantics.
 
-Plugins SHOULD use Semantic Versioning for `version`.
+The exact queue technology is runtime-defined.
 
-| Segment | Meaning                     | Description                                            |
-| ------- | --------------------------- | ------------------------------------------------------ |
-| Major   | Breaking change             | Incompatible behavior or schema change.                |
-| Minor   | Backward-compatible feature | New behavior without breaking existing clients or users. |
-| Patch   | Backward-compatible fix     | Corrective change without intended behavioral break.   |
+### 9.2 MCP interoperability
 
-Clients MAY use `version` to determine whether updates are available and whether caches are stale.
+An MCPQ channel MAY expose or consume MCP operations. A runtime MUST NOT assume that an MCP endpoint is synchronous simply because MCP is being used.
 
-## 11. Client conformance
+Long-running work MAY use MCP Tasks or an equivalent queue-backed runtime mechanism. MCP's current Tasks extension models durable asynchronous execution and deferred result retrieval. The Agent Behavior runtime may map that capability onto a Queue without changing MCP wire semantics.
 
-### 11.1 Minimum client requirements
+## 10. Discovery
 
-A conformant client MUST satisfy all applicable requirements in sections 1–10. At minimum, it:
+A conformant runtime MUST:
 
-1. Can load a plugin from a directory path.
-2. Selects a locally supported plugin manifest schema from `$schema`, then parses and validates the closed `plugin.json` schema using the non-fatal exceptions in §5.2 and §8.1.
-3. Ignores unimplemented members of `extensions` without validating the contents of their values.
-4. For each component type it supports, discovers components in its fixed location.
-5. If it supports MCP servers, selects a locally supported MCP configuration schema from `$schema` and supports at least one of the `stdio` or `streamable-http` variants in `mcp.json`.
-6. If the client launches plugin subprocesses (i.e., stdio MCP servers), provides `PLUGIN_ROOT` and `PLUGIN_DATA` and expands both variables in runtime configuration values (`args`, `env`, `cwd`).
-7. For stdio MCP servers, resolves `command` as a single executable token and uses the plugin root as the default subprocess working directory.
-8. Supports at least one component type (skills or MCP servers).
+1. establish the filesystem-resolved Agent root;
+2. load and validate agent.json;
+3. load the root SKILL.md;
+4. discover immediate Action directories;
+5. discover mcpq.json when present;
+6. initialize supported knowledge and evolution facilities according to policy;
+7. report independent failures without invalidating unrelated valid components.
 
-### 11.2 Incremental adoption
+Missing optional component locations are valid absence.
 
-A client is not required to support every component type. For example, a skills-only client can conform without supporting MCP servers, provided it satisfies all applicable requirements.
+A malformed root manifest or missing root SKILL.md invalidates the Agent package.
 
-### 11.3 Unsupported components and failures
+A malformed Action invalidates only that Action.
 
-1. Clients MUST ignore unsupported component types.
-2. An unknown top-level field or a non-object `extensions` field is non-fatal under §5.2 and §8.1. Any other `plugin.json` schema violation is fatal to the plugin: the client MUST reject the plugin and MUST NOT discover or execute any of its components.
-3. A failure isolated to a component type, component entry, or component process MUST NOT prevent the client from loading independently valid components. Clients MUST apply the failure behavior defined for that component in §6 and §7.
-4. Clients SHOULD report invalid configuration and component failures. Clients MAY report partially unsupported plugins, but lack of support for a component type, MCP transport, or client extension is not itself an error.
+A malformed MCPQ channel invalidates only that channel when it can be isolated safely.
 
----
+A runtime MUST NOT make a broken Action or channel prevent independent Actions or channels from loading.
 
-## Appendix A: Conformance Checklist
+## 11. Progressive disclosure
 
-*This checklist is for convenience only — when it conflicts with the spec text above, the spec governs.*
+Agent Behavior retains the progressive-disclosure principle of Agent Skills.
 
-### Plugin loader
+At discovery time, runtimes SHOULD load only lightweight metadata.
 
-- [ ] Parse and validate `plugin.json` ([§5.1](#51-location-and-loading), [§5.2](#52-manifest-object))
-- [ ] Validate required `$schema` and `name` fields ([§5.3](#53-required-fields))
-- [ ] Validate plugin name against naming constraints ([§5.5](#55-plugin-name-constraints))
-- [ ] Report and ignore unknown `plugin.json` fields ([§5.2](#52-manifest-object))
-- [ ] Ignore unimplemented namespaces in `extensions` without validating the contents of their values ([§8.1](#81-manifest-extension-data))
-- [ ] Reject package paths that resolve outside the plugin root ([§4.1](#41-general-requirements))
-- [ ] Discover implemented file-based extensions from their top-level namespace directories ([§8.2](#82-extension-directories))
+When an Action is selected, the runtime loads its complete SKILL.md.
 
-### Component discovery
+References, assets, and scripts SHOULD be loaded or executed only when required by the Action.
 
-- [ ] Scan the fixed location for each supported component type ([§6.1](#61-fixed-locations))
-- [ ] Ignore missing fixed locations without error ([§6.2](#62-missing-locations))
+The root Agent Skill may be loaded earlier because it defines the Agent's behavior, but runtimes SHOULD still avoid loading unrelated Action resources into context.
 
-### MCP configuration
+## 12. Security and trust
 
-- [ ] Select a supported `$schema`, then validate the closed `mcp.json` schema and each server variant ([§7.2.1](#721-discovery-and-configuration))
-- [ ] If supporting MCP, implement at least one of stdio or Streamable HTTP ([§7.2.1](#transport-support))
-- [ ] Use each server entry's declared transport for the initial connection attempt ([§7.2.1](#transport-support))
-- [ ] Enforce remote URL and literal-header requirements ([§7.2.1](#streamable-http-and-legacy-httpsse))
+Skills and Actions can change Agent behavior and may execute scripts. A valid package is therefore not automatically trusted.
 
-### Environment and expansion
+Runtimes SHOULD provide:
 
-- [ ] If the client launches plugin subprocesses, provide `PLUGIN_ROOT` and a dedicated writable `PLUGIN_DATA` directory ([§9.1](#91-subprocess-environment))
-- [ ] Resolve MCP server `command` as a single bare or plugin-relative executable token ([§7.2.1](#721-discovery-and-configuration))
-- [ ] Use the plugin root as the default MCP server working directory ([§7.2.1](#721-discovery-and-configuration))
-- [ ] Validate explicit `cwd` forms and post-resolution containment ([§7.2.1](#721-discovery-and-configuration))
-- [ ] Overlay configured `env` entries on a client-selected base environment ([§9.1](#91-subprocess-environment))
-- [ ] Set client-provided `PLUGIN_ROOT` and `PLUGIN_DATA` after applying configured `env`, replacing equivalent names according to platform environment-name semantics ([§9.1](#91-subprocess-environment))
-- [ ] Do not require configured `PATH` to affect bare-command resolution ([§7.2.1](#721-discovery-and-configuration))
-- [ ] Expand only `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` in MCP server `args`, `env`, and `cwd` fields ([§9.2](#92-placeholder-expansion))
+- package provenance;
+- content digests or signatures where available;
+- explicit permission and trust policy;
+- sandboxing for subprocesses;
+- secret isolation;
+- path containment;
+- audit logs;
+- policy enforcement before external side effects.
 
-### Resilience
+MCPQ channels MUST preserve authentication, authorization, tenant isolation, and correlation boundaries.
 
-- [ ] Ignore unsupported component types ([§11.3](#113-unsupported-components-and-failures))
-- [ ] Skip server entries whose declared transport is unsupported without affecting other servers or components ([§7.2.2](#722-loading-rules))
-- [ ] Continue loading when an independent component fails ([§11.3](#113-unsupported-components-and-failures))
-- [ ] Support at least one component type ([§11.1](#111-minimum-client-requirements))
+Knowledge ingestion SHOULD sanitize secrets and sensitive data before persistence. The Agent Behavior specification does not grant a Skill permission to read arbitrary private knowledge.
 
----
+## 13. Compatibility with Agent Skills
 
-## Design Decisions
+A directory containing a conventional Agent Skills SKILL.md can be represented as an Action without changing the file itself.
 
-*This section explains why key design choices were made. It is for context only — the binding rules are in the normative sections above.*
+This makes migration possible:
 
-### Why directory-based discovery?
+    Agent Skill
+        │
+        ├── SKILL.md
+        ├── scripts/
+        ├── references/
+        └── assets/
+                 │
+                 ▼
+    Agent Behavior Action
+        actions/<name>/
+        ├── SKILL.md
+        ├── scripts/
+        ├── references/
+        └── assets/
 
-Plugins use filesystem directories as the package unit rather than archive formats (`.zip`, `.tar.gz`) or registry-fetched bundles. This keeps plugins inspectable with standard tools (`ls`, `cat`, `git`), editable in-place during development, and compatible with version control without special tooling. Fixed root-level locations such as `skills/` and `mcp.json` eliminate discovery indirection, alternate-source precedence, and manifest configuration that every client would otherwise need to implement.
+The difference is semantic scope. Agent Skills says "this is reusable expertise for an agent"; Agent Behavior says "this is the behavior and executable capability of this Action within an Agent".
 
-### Why only Agent Skills and MCP in v1?
+## 14. Compatibility with Agent Plugins
 
-Agent Plugins v1 focuses on Agent Skills and MCP because both have established specifications outside this project and meaningful cross-client adoption. Other proposed component types — such as commands, hooks, agents, rules, and LSP servers — remain too client-specific for a stable portable contract and are outside the v1 format until their formats converge.
+An Agent Plugin can be adapted mechanically:
 
-### Why root-level `plugin.json` is the conformance floor
+    plugin.json       → agent.json
+    skills/<name>/    → actions/<name>/
+    mcp.json          → mcpq.json
 
-Every conformant client MUST check `plugin.json` at the plugin root ([§5.1](#51-location-and-loading)). This gives plugin authors a single guaranteed manifest that works across all clients without client-specific path knowledge.
+The Agent Behavior model adds the root SKILL.md and optional knowledge/ lifecycle.
 
-### Why a closed portable manifest?
+A compatibility layer MAY expose Agent Behavior packages as Agent Plugins by projecting Actions as Skills and MCPQ MCP bindings as MCP servers.
 
-Restricting root `plugin.json` to known fields enables strict validation, typo detection, and schema-driven key completion. Client experiments cannot claim arbitrary top-level fields; they are contained under reverse-domain keys in `extensions`. Unknown top-level fields remain schema violations, but clients report and ignore them instead of rejecting an otherwise valid plugin.
+This projection is intentionally lossy when the target format has no representation for Agent identity, queue semantics, or persistent knowledge.
 
-### Why reverse-domain client extensions?
+## 15. Compatibility with WikiSkill
 
-Reverse-domain identifiers provide a decentralized convention for avoiding collisions without requiring a central client-name registry. The same identifier can be used for manifest data and a client-specific directory, while either representation can exist independently. Extension directories remain top-level to keep plugin layouts flat and convention-driven.
+WikiSkill's separation between experience, persistent knowledge, and executable skills maps directly:
 
-### Why an explicit MCP configuration format?
+| WikiSkill concept | Agent Behavior |
+| --- | --- |
+| Raw execution traces | knowledge/evidence/ |
+| Wiki | knowledge/wiki/ |
+| Active skills | Agent SKILL.md and Action SKILL.md |
+| Skill proposer | Evolution subsystem |
+| Validation gate | Agent validation policy |
+| Rejected proposal retained | knowledge/evolution/ |
 
-Existing clients use incompatible MCP configuration shapes and infer transports differently. Agent Plugins therefore defines an explicit closed union whose meaning is independent of any client-native format. Distinguishing Streamable HTTP from legacy HTTP+SSE gives each entry an unambiguous initial transport while leaving fallback behavior after a failed connection outside the portable format.
+Agent Behavior does not require a particular LLM, proposer architecture, validator implementation, or benchmark. The lifecycle is the portable contract; the implementation is runtime-specific.
 
-### Why may clients support only one standard MCP transport?
+## 16. Versioning
 
-Stdio and Streamable HTTP serve different deployment and security models. Requiring every MCP-capable client to support both local process execution and remote HTTP connectivity would expand its implementation and trust surface without changing the portable configuration format. Because each server entry declares its transport, a client can skip unsupported entries while continuing to load independent servers and components.
+The specification version identifies the manifest and channel schemas together.
 
-### Why do schemas share the specification version?
+Published schema identifiers MUST remain immutable.
 
-`plugin.json` and `mcp.json` schemas use the Agent Plugins specification version rather than independent version sequences. This gives plugin authors and clients one portable format version to understand, prevents mixed-version packages, and lets `$schema` select the complete validation and interpretation contract — including requirements that JSON Schema cannot express. Republishing an unchanged schema with a new specification release is a small maintenance cost compared with exposing three independent compatibility timelines.
+Agents SHOULD use Semantic Versioning for version.
 
-### Why plugin variables over relative paths in configs?
+A breaking change to the Agent package contract requires a new specification version.
 
-MCP server arguments often need absolute paths at runtime. `${PLUGIN_ROOT}` provides an unambiguous, client-resolved anchor for bundled files, while `${PLUGIN_DATA}` identifies client-managed writable state that persists when package contents are replaced during an update. The `command` field does not use interpolation: a `./` path is resolved directly against the plugin root, and a bare name uses the platform's executable search rules. Treating `command` as one token avoids requiring clients to parse and escape user-authored shell command strings. Clients differ in inherited environment and `PATH` behavior, so Agent Plugins standardizes configured environment overrides but leaves bare-command search client-defined; plugin-relative commands provide deterministic bundled execution.
+An Action MAY evolve independently when its behavior contract is versioned by the containing Agent package or an explicit Action version policy.
 
-### Why component failures are non-fatal
+## 17. Conformance checklist
 
-When an MCP server fails to start or connect, the client continues loading the plugin's remaining components ([§11.3](#113-unsupported-components-and-failures)). A plugin that provides skills and an MCP server should not become entirely unusable because one server is unavailable. The spec pairs non-fatal component failures with diagnostic requirements so that failures are visible rather than silent.
+A runtime claiming conformance MUST:
+
+- validate the Agent root boundary;
+- validate agent.json;
+- require and load the root SKILL.md;
+- discover Actions from actions/;
+- preserve Agent Skills-compatible SKILL.md semantics;
+- isolate invalid Actions;
+- recognize mcpq.json when MCPQ is supported;
+- use Queue as the default MCPQ mode;
+- isolate invalid channels;
+- keep persistent knowledge separate from active runtime behavior;
+- preserve rejected evolution proposals when an evolution subsystem is enabled;
+- enforce configured validation gates before promoting learned behavior;
+- avoid treating external Agent Skill, Plugin, MCP, or WikiSkill implementations as trusted merely because they are structurally valid.
+
+## Appendix A — Concept map
+
+    Agent Skills
+         │
+         │ SKILL.md + progressive disclosure
+         ▼
+    Agent Plugins
+         │
+         │ packaging + discovery + MCP
+         ▼
+    WikiSkill
+         │
+         │ evidence + wiki + gated evolution
+         ▼
+    Agent Behavior
+         │
+         ├── Agent
+         │    └── SKILL.md
+         ├── Actions
+         │    └── SKILL.md
+         ├── Knowledge
+         │    ├── Evidence
+         │    ├── Wiki
+         │    └── Evolution
+         └── MCPQ
+              └── Queue by default
+
+The resulting model treats an Agent as a first-class Actor whose behavior, capabilities, learning state, and communication boundaries are explicitly represented.

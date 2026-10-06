@@ -1,11 +1,21 @@
 ---
-title: Compatible Clients
-description: Explore clients that support the portable Agent Plugins format and the components each client can load.
+title: Compatible runtimes
+description: How runtimes can adopt the Agent Behavior specification.
 type: overview
 full: true
 ---
 
-Agent Plugins clients can adopt portable component types incrementally. The
-clients below document the components and MCP transports they support.
+Agent Behavior is a draft specification. This site does not currently certify any runtime as fully conformant.
 
-<CompatibleClients />
+A runtime may implement the model incrementally:
+
+| Capability | Meaning |
+| --- | --- |
+| Agent package | Loads agent.json and the root SKILL.md. |
+| Actions | Discovers and executes actions/<name>/SKILL.md. |
+| MCPQ | Loads queue-first communication channels from mcpq.json. |
+| Knowledge | Separates evidence, Wiki knowledge, and evolution state from active behavior. |
+| Evolution | Uses validation gates before promoting learned changes. |
+| MCP interoperability | Maps MCPQ channels to MCP while preserving MCP semantics. |
+
+Conformance claims should be backed by executable tests and a published implementation matrix. The specification does not treat compatibility with Agent Skills or Agent Plugins as proof that a runtime implements Agent Behavior.

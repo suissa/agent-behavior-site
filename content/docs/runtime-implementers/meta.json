@@ -1,11 +1,11 @@
 {
-  "title": "For Client Implementers",
+  "title": "For Runtime Implementers",
   "collapsible": false,
   "defaultOpen": true,
   "pages": [
-    "implement-an-agent-plugins-client",
+    "implement-agent-runtime",
     "loading-and-discovery",
-    "mcp-runtime",
+    "mcpq-runtime",
     "conformance"
   ]
 }

@@ -1,6 +1,35 @@
 {
-  "repository": "https://github.com/agentplugins/agent-plugins-spec",
-  "version": "1.0.0",
-  "status": "published",
-  "commit": "bd383552095128f6effe895b9257cfd580a6d179"
+  "project": "Agent Behavior Specification",
+  "version": "1.0.0-draft",
+  "status": "working-draft",
+  "lineage": [
+    {
+      "project": "Agent Skills",
+      "source": "https://github.com/agentskills/agentskills",
+      "role": "SKILL.md format, progressive disclosure, scripts, references, assets"
+    },
+    {
+      "project": "Agent Plugins",
+      "source": "https://github.com/agentplugins/agent-plugins-spec",
+      "version": "1.0.0",
+      "role": "portable package discovery, manifests, MCP configuration, failure isolation"
+    },
+    {
+      "project": "WikiSkill",
+      "source": "https://arxiv.org/abs/2608.27454",
+      "role": "evidence, persistent wiki knowledge, skill evolution, validation-gated promotion"
+    },
+    {
+      "project": "Model Context Protocol",
+      "source": "https://modelcontextprotocol.io/",
+      "role": "interoperable Agent communication and MCP semantics"
+    }
+  ],
+  "design": {
+    "agent": "primary executable Actor",
+    "agent_skill": "root SKILL.md",
+    "actions": "actions/<name>/SKILL.md",
+    "knowledge": "evidence, wiki, evolution",
+    "mcpq": "queue-first communication channels with optional MCP interoperability"
+  }
 }

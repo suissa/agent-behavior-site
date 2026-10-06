@@ -1,0 +1,12 @@
+{
+  "title": "For Agent Authors",
+  "collapsible": false,
+  "defaultOpen": true,
+  "pages": [
+    "build-an-agent",
+    "manifest",
+    "actions",
+    "mcpq",
+    "extensions"
+  ]
+}

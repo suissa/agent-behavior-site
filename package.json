@@ -1,6 +1,6 @@
 {
-  "name": "agent-plugins-site",
-  "description": "Documentation site for the Agent Plugins standard.",
+  "name": "agent-behavior-site",
+  "description": "Documentation site for the Agent Behavior specification.",
   "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@10.34.0",
