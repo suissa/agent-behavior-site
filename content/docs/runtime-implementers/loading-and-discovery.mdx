@@ -1,0 +1,69 @@
+---
+title: Loading and discovery
+description: Discover Agent components and apply narrow failure boundaries.
+---
+
+## Establish the Agent boundary
+
+The Agent root is one filesystem location. Every package file discovered, read, or executed must remain inside the filesystem-resolved root.
+
+## Load the manifest first
+
+The runtime loads agent.json before discovering components.
+
+The manifest identifies the specification version and Agent identity. It does not relocate component paths.
+
+A missing or unsupported schema identifier is a manifest failure.
+
+## Discover the Agent Skill
+
+The root SKILL.md is required.
+
+The runtime validates its frontmatter using the Agent Skills-compatible rules and then interprets the body as the Agent's behavioral contract.
+
+## Discover Actions
+
+The runtime scans only immediate child directories of actions/.
+
+For each child directory:
+
+- SKILL.md is required;
+- the Action name must be stable and match the directory identity;
+- bundled scripts, references, and assets remain scoped to that Action;
+- invalid Actions are skipped without disabling siblings.
+
+The runtime must not recursively invent Actions from arbitrary nested SKILL.md files.
+
+## Discover knowledge
+
+knowledge/ is optional.
+
+A runtime may recognize:
+
+- evidence/ for execution observations;
+- wiki/ for persistent knowledge;
+- evolution/ for proposals, validations, and decisions.
+
+The presence of these directories does not make their content active instructions.
+
+## Discover MCPQ
+
+mcpq.json is optional.
+
+A missing file means the Agent has no portable MCPQ channels.
+
+When present, the runtime validates the top-level document and then each channel independently.
+
+A channel with no explicit type defaults to queue.
+
+## Failure boundaries
+
+Apply the narrowest boundary:
+
+1. reject the Agent if the root manifest is invalid;
+2. reject the Agent if the required root Skill is invalid;
+3. skip one invalid Action;
+4. skip one invalid MCPQ channel;
+5. preserve independent valid components after any isolated failure.
+
+This is inherited from the failure-isolation principle of Agent Plugins, but applied to Agent semantics.
