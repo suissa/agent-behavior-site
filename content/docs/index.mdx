@@ -1,74 +1,111 @@
 ---
 title: Agent Behavior
-description: A portable execution model for Agents with behavioral skills, Actions, persistent knowledge, and MCPQ channels.
+description: A behavior-first execution model for semantic Agents, derived Skills, Actions, persistent Knowledge, and MCPQ communication.
 ---
 
-Agent Behavior defines a portable unit of executable agent behavior.
+Agent Behavior defines a portable execution model in which the Agent is the first-class semantic unit.
 
-The primary unit is an Agent, not a plugin. An Agent is an Actor with an identity, a behavioral SKILL.md, executable Actions, persistent knowledge, and communication channels. The format is designed to be portable across runtimes while remaining explicit about what is normative and what belongs to a particular client.
+The central rule is:
 
-## Why this specification exists
+> Every semantic Agent instance has an Agent Skill derived from its Behavior Flow.
 
-Agent Skills solved an important packaging problem: reusable expertise can be represented as a directory containing SKILL.md, scripts, references, and assets. Agent Plugins extended that idea by defining a portable package containing Skills and MCP servers.
-
-Those specifications describe valuable primitives, but they do not define the complete semantic unit of an executable Agent.
-
-Agent Behavior makes the Agent itself the unit of composition:
+The filesystem package is the portable projection of that model:
 
     Agent
-    ├── SKILL.md              # Agent-level behavior
-    ├── actions/              # Executable capabilities
-    │   └── <action>/SKILL.md
-    ├── knowledge/            # Evidence, wiki, evolution state
-    └── mcpq.json             # Communication channels
-
-## The semantic distinction
-
-An Agent Skill is a portable resource that teaches an agent how to perform a capability.
-
-An Agent Behavior Skill is the behavioral contract of an Agent or Action: the durable description of how that execution unit should behave, decide, recover, and interact.
-
-The same SKILL.md mechanics are intentionally reused where possible, but the semantic role is different.
-
-Agent = Actor and execution identity.
-
-SKILL.md = behavioral definition of that Agent or Action.
-
-Action = executable capability exposed by the Agent.
-
-Knowledge = persistent experience and learned knowledge, kept separate from the active behavioral instructions.
-
-MCPQ = channel boundary for Agent communication; Queue is the default mode, with MCP available as an interoperable protocol mode.
-
-## What is incorporated
-
-The specification is deliberately cumulative:
-
-- Agent Skills contributes the portable SKILL.md format and progressive disclosure model.
-- Agent Plugins contributes portable package discovery, manifests, fixed component locations, MCP configuration, and narrow failure isolation.
-- WikiSkill contributes the separation of raw experience, persistent wiki knowledge, executable skills, proposal loops, and validation-gated promotion.
-- This specification adds Agent identity, Action semantics, Agent-level Skills, explicit knowledge lifecycle, MCPQ channels, and runtime-oriented composition.
-
-It is therefore best understood as a semantic superset in scope, rather than a claim that every external implementation detail is reproduced byte-for-byte.
-
-## Minimal Agent
-
-    sales-agent/
     ├── agent.json
-    ├── SKILL.md
-    ├── actions/
-    │   └── create-order/
-    │       └── SKILL.md
-    └── mcpq.json
+    ├── SKILL.md                 # derived Agent Skill
+    ├── actions/                 # executable capabilities
+    │   └── <action>/SKILL.md
+    ├── knowledge/               # evidence, wiki, evolution
+    └── mcpq.json                # communication channels
 
-The runtime reads the manifest, loads the Agent Skill, discovers Actions, and establishes the declared MCPQ channels. Missing optional components do not invalidate independently valid components.
+## Why this model exists
+
+Agent Skills standardized a useful portable primitive: SKILL.md plus optional scripts, references, assets, and progressive disclosure. Agent Plugins standardized packaging around Skills and MCP servers. WikiSkill demonstrated how persistent knowledge can support controlled skill evolution. MCP Tasks now provides official durable asynchronous task semantics.
+
+Agent Behavior combines these ideas but changes the semantic center.
+
+The important distinction is not a directory rename.
+
+It is:
+
+    Skill       = behavioral definition / projection
+    Action      = executable capability
+    Agent       = semantic execution unit
+    Actor       = concrete execution identity
+    Runtime     = execution environment
+
+## Complete semantic chain
+
+    Intent
+      ↓
+    Behavior Flow
+      ↓
+    AtomicSkill → AtomicBehavior → Action
+                                  ↓
+                                Agent
+                                  ↓
+                                Actor
+                                  ↓
+                               Runtime
+                                  ↓
+                              Trajectory
+                                  ↓
+                               Evidence
+                                  ↓
+                                 Wiki
+                                  ↓
+                              Evolution
+                                  └──→ validated Behavior Flow change
+                                             ↓
+                                      derived Agent Skill
+
+This gives one model for execution, testing, observability, knowledge, and controlled evolution without treating every log, prompt, or Skill file as the same semantic object.
+
+## What is portable
+
+Agent Behavior standardizes the package boundary and the portable projections:
+
+- Agent identity;
+- root Agent Skill;
+- Action discovery;
+- Agent Skills-compatible SKILL.md mechanics;
+- Knowledge boundaries;
+- MCPQ channel configuration;
+- narrow failure isolation;
+- Actor/Runtime responsibility boundaries.
+
+The semantic source may live in a separate Semantic-as-Code layer. This draft does not force one DSL for Behavior Flow.
+
+## Queue-first communication
+
+MCPQ is the Agent communication boundary.
+
+Queue is the default because Agent execution can be asynchronous and durable. Work may need retry, delayed execution, fan-out, human healing, or resumption.
+
+MCP remains available for interoperability, and MCP Tasks can provide durable asynchronous task handles where supported.
+
+## Knowledge is not behavior
+
+A critical boundary is:
+
+    Evidence ≠ Wiki ≠ Active Skill
+
+Evidence records what happened.
+
+Wiki stores what was learned from it.
+
+The active Agent or Action Skills represent what the Agent is currently expected to do.
+
+Evolution connects these layers through an explicit validation gate.
 
 ## Choose a path
 
 <Cards>
-  <Card title="Build an Agent" href="/agent-authors/build-an-agent" description="Create an Agent package with an Agent Skill, Actions, knowledge, and MCPQ channels." />
-  <Card title="Understand Actions" href="/agent-authors/actions" description="Map Agent Skills into the Action model without losing portability." />
-  <Card title="Configure MCPQ" href="/agent-authors/mcpq" description="Define queue-first communication channels and optional MCP bindings." />
-  <Card title="Implement a runtime" href="/runtime-implementers/implement-agent-runtime" description="Discover, validate, execute, and isolate Agent components." />
+  <Card title="Semantic model" href="/concepts" description="Understand Intent, Behavior Flow, AtomicSkill, AtomicBehavior, Action, Agent, Actor, Runtime, Trajectory, Knowledge, Evolution, and MCPQ." />
+  <Card title="Build an Agent" href="/agent-authors/build-an-agent" description="Create the portable Agent package." />
+  <Card title="Understand Actions" href="/agent-authors/actions" description="Map Skills into executable Agent capabilities." />
+  <Card title="Configure MCPQ" href="/agent-authors/mcpq" description="Define queue-first communication channels." />
+  <Card title="Implement a runtime" href="/runtime-implementers/implement-agent-runtime" description="Discover, validate, execute, isolate, and observe Agent components." />
   <Card title="Read the specification" href="/specification" description="Read the normative Agent Behavior contract." />
 </Cards>
