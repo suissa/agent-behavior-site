@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/suissa/agent-behavior-site/blob/main/public/schemas/1.0.0/mcpq.schema.json",
+  "title": "Agent Behavior MCPQ Configuration",
+  "description": "Machine-readable schema for queue-first Agent communication channels.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://github.com/suissa/agent-behavior-site/blob/main/public/schemas/1.0.0/mcpq.schema.json"
+    },
+    "channels": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/channel"
+      }
+    }
+  },
+  "required": ["$schema", "channels"],
+  "additionalProperties": false,
+  "$defs": {
+    "channel": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": ["queue", "mcp"],
+          "default": "queue"
+        },
+        "delivery": {
+          "enum": ["at-most-once", "at-least-once", "exactly-once"]
+        },
+        "ordering": {
+          "enum": ["none", "per-key", "global"]
+        },
+        "retry": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "deadLetter": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "mcp": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string" },
+            "transport": { "type": "string" },
+            "headers": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
