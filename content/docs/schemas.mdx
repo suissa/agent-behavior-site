@@ -1,16 +1,32 @@
 ---
 title: JSON Schemas
-description: Canonical machine-readable schemas for Agent manifests and MCPQ channel configuration.
+description: Canonical machine-readable schemas for Agent identity and MCPQ channel configuration.
 type: reference
 ---
 
-Agent Behavior publishes separate JSON Schemas for the Agent manifest and MCPQ configuration.
+Agent Behavior publishes schemas for the machine-readable parts of the package.
 
 <Cards>
-  <Card title="Agent manifest schema" href="/schemas/1.0.0/agent.schema.json" description="Validate the root agent.json manifest." />
+  <Card title="Agent manifest schema" href="/schemas/1.0.0/agent.schema.json" description="Validate agent.json identity and package metadata." />
   <Card title="MCPQ schema" href="/schemas/1.0.0/mcpq.schema.json" description="Validate queue-first Agent communication channels." />
 </Cards>
 
-The specification is authoritative if its requirements conflict with a machine-readable schema.
+The JSON Schemas do not attempt to encode the entire semantic model.
 
-Schema identifiers are immutable once published. This draft uses the repository URL as its canonical identifier until the specification has a dedicated public domain.
+That is intentional.
+
+agent.json expresses Agent identity and package metadata.
+
+SKILL.md expresses the portable behavioral projection derived from the Behavior Flow.
+
+actions/ contains executable capability boundaries.
+
+knowledge/ contains Evidence, Wiki, and Evolution state.
+
+mcpq.json expresses Agent communication channels.
+
+Behavior Flow, AtomicSkill, AtomicBehavior, Intent, Trajectory, and the full semantic source model remain implementation- or DSL-level artifacts in this draft. A future version may define a canonical machine-readable Behavior Flow schema once its semantics are fully formalized.
+
+The specification text is authoritative if its requirements conflict with a machine-readable schema.
+
+The current schema URLs are draft repository identifiers. They are not yet immutable publication identifiers. Once version 1.0.0 is published, its identifiers MUST become immutable.
