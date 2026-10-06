@@ -3,65 +3,76 @@ title: MCPQ runtime
 description: Execute queue-first channels and interoperate with MCP without collapsing asynchronous Agent work into synchronous calls.
 ---
 
-MCPQ defines the Agent communication boundary. MCP remains authoritative for MCP protocol behavior.
+MCPQ defines the Agent communication boundary.
+
+The semantic model is:
+
+    MCPQ
+      ├── Queue: default work-delivery semantics
+      └── MCP: interoperability semantics when required
 
 ## Channel selection
 
 Read mcpq.json and select each channel's declared type.
 
-If type is absent, use queue.
+If type is absent, the runtime MUST treat it as queue.
 
-Queue is the default because long-running Agent work should not require a caller to hold a request open.
+Queue is the default because Agent work can outlive a process, connection, or immediate request.
 
 ## Queue execution
 
 A Queue runtime should support the guarantees declared by the channel:
 
-- enqueue;
+- enqueue and dequeue;
 - acknowledgement;
 - retry;
 - idempotency;
-- correlation;
+- correlation and causation;
 - optional ordering;
 - dead-letter handling;
+- visibility or lease handling;
 - cancellation or expiry where supported.
 
 The runtime MUST NOT advertise guarantees it cannot enforce.
 
+Queue delivery is an execution mechanism, not the definition of the Agent behavior. The Behavior Flow determines why the work exists and what outcome is expected.
+
 ## MCP execution
 
-For type mcp, establish the configured MCP connection and follow MCP lifecycle, capability negotiation, authorization, and transport rules.
+For type mcp, establish the configured MCP binding and follow MCP capability negotiation, authorization, transport, lifecycle, and message semantics.
 
-Do not reinterpret MCP messages as queue messages unless the MCPQ binding explicitly defines that mapping.
+MCP messages MUST NOT be rewritten into an unrelated queue protocol merely because the runtime uses a queue internally.
 
 ## Long-running work
 
-MCP Tasks provide a standardized direction for durable asynchronous execution and deferred result retrieval. An MCPQ runtime may implement that behavior over an internal queue.
+The current MCP Tasks extension provides durable task handles for long-running operations, deferred result retrieval, progress states, cancellation, and input-required flows.
 
-The important invariant is that the Agent's execution identity, correlation identifiers, authorization context, and final result remain stable across retries, reconnections, and delayed completion.
+An MCPQ runtime MAY implement the underlying work over an internal Queue. The mapping must preserve task identity, authorization context, correlation, and final result semantics.
 
 ## Human healing
 
 A Queue channel is particularly suitable for human-healing flows:
 
-    Agent
-      |
-      v
-    human-healing queue
-      |
-      v
-    Human
-      |
-      v
-    decision / correction
-      |
-      v
-    Agent
+    Agent Actor
+        |
+        v
+    human-healing Queue
+        |
+        v
+    Human decision / correction
+        |
+        v
+    resumed Behavior Flow
+        |
+        v
+    Agent Actor
 
-The Agent does not need to remain blocked while a human decides.
+The Actor need not remain blocked while a human decides.
 
 ## Runtime failures
 
 If one channel fails to connect or process work, continue operating independent Actions and channels when possible.
 
-A queue delivery failure follows its configured retry policy. An MCP authentication or handshake failure affects only that MCP channel unless the Agent explicitly marks the channel as required.
+A queue delivery failure follows its configured retry policy.
+
+An MCP authentication or capability failure affects only that MCP channel unless Agent policy explicitly makes the channel required.
