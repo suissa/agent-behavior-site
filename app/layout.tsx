@@ -9,13 +9,13 @@ import { SidebarProvider } from "fumadocs-ui/layouts/docs/slots/sidebar";
 import type { Metadata } from "next";
 
 const description =
-  "A portable package format for reusable components that extend AI agents.";
+  "A portable execution model for Agents with behavioral skills, Actions, persistent knowledge, and MCPQ channels.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Agent Plugins",
-    template: "%s | Agent Plugins",
+    default: "Agent Behavior",
+    template: "%s | Agent Behavior",
   },
   description,
 };
