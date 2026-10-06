@@ -1,6 +1,7 @@
 {
   "pages": [
     "index",
+    "concepts",
     "compatible-clients",
     "---For Agent Authors---",
     "...agent-authors",
