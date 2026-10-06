@@ -1,71 +1,74 @@
 ---
-title: MCP servers
-description: Configure portable stdio, Streamable HTTP, and legacy HTTP+SSE MCP connections.
+title: MCPQ channels
+description: Configure queue-first Agent communication with optional MCP interoperability.
 ---
 
-Agent Plugins defines a closed `mcp.json` format that clients map to their native MCP configuration. The [Model Context Protocol specification](https://modelcontextprotocol.io/specification) remains authoritative for MCP wire behavior and lifecycle.
+MCPQ is the Agent communication boundary.
 
-## Configuration document
+The root configuration is mcpq.json. A channel defaults to Queue mode.
 
-`mcp.json` lives at the plugin root and contains only `$schema` and `mcpServers` as its top-level fields:
+## Minimal configuration
 
-```json title="mcp.json"
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-  "mcpServers": {
-    "validator": {
-      "type": "stdio",
-      "command": "./bin/validator",
-      "args": ["--data", "${PLUGIN_DATA}/validator"],
-      "env": {
-        "CONFIG": "${PLUGIN_ROOT}/config.json"
-      },
-      "cwd": "${PLUGIN_ROOT}"
-    },
-    "deployment-api": {
-      "type": "streamable-http",
-      "url": "https://deploy.example.com/mcp",
-      "headers": {
-        "X-Tenant": "public-tenant"
+    {
+      "$schema": "https://github.com/suissa/agent-behavior-site/blob/main/public/schemas/1.0.0/mcpq.schema.json",
+      "channels": {
+        "orders": {
+          "type": "queue"
+        }
       }
     }
-  }
-}
-```
 
-## Transports
+## Channel model
 
-| Type | Required fields | Notes |
-| --- | --- | --- |
-| `stdio` | `type`, `command` | Optional `args`, `env`, and `cwd`. |
-| `streamable-http` | `type`, `url` | Current remote MCP transport; optional literal `headers`. |
-| `sse` | `type`, `url` | Deprecated HTTP+SSE transport; client support is optional. |
+Each channel has a stable name and a type.
 
-An MCP-capable conformant client supports at least one of `stdio` and `streamable-http` and should support both. Support for `sse` is optional. A client uses the declared transport for its initial connection attempt. Agent Plugins does not define fallback behavior if that attempt fails.
+Supported types in this draft are:
 
-## stdio commands and paths
+- queue — the default asynchronous channel.
+- mcp — an interoperable MCP channel.
 
-`command` is one executable token, not a shell command. It is either a bare executable name resolved by platform search rules or a plugin-relative path beginning with `./`. Placeholder expansion does not apply to `command`.
+Queue is the default even when type is omitted.
 
-When omitted, `cwd` is the plugin root. An explicit `cwd` is plugin-relative, rooted at `${PLUGIN_ROOT}`, or rooted at `${PLUGIN_DATA}`, and must stay within the corresponding directory.
+## Queue channels
 
-## Plugin variables
+A queue channel SHOULD define only the guarantees that the runtime can actually provide.
 
-Clients provide two environment variables to stdio subprocesses:
+Common properties include:
 
-- `PLUGIN_ROOT`: the absolute, filesystem-resolved plugin root.
-- `PLUGIN_DATA`: a dedicated writable data directory that persists across plugin updates.
+- delivery: at-most-once, at-least-once, or exactly-once where genuinely supported;
+- ordering: whether message order is significant;
+- retry policy;
+- dead-letter policy;
+- visibility or lease duration;
+- idempotency requirements.
 
-Clients expand both placeholders in `args`, `env` values, and `cwd`. Expansion is textual, single-pass, and non-recursive. It does not apply to environment keys, `command`, remote URLs, or HTTP headers. A plugin cannot override the reserved environment variables.
+The specification does not mandate a particular queue technology.
 
-## Remote connections
+## MCP channels
 
-Remote URLs are absolute HTTP or HTTPS URLs without user information or fragments. Non-loopback endpoints use HTTPS. Configured headers are literal, visible package data and must not contain credentials or secrets.
+An MCP channel binds the Agent boundary to an MCP server. MCP remains authoritative for MCP protocol semantics, capabilities, authorization, and lifecycle.
 
-Agent Plugins 1.0.0 defines no portable OAuth or credential-reference fields. Authentication remains client-managed.
+A runtime MAY map long-running MCP work to an internal Queue. The mapping must preserve correlation, authorization, and result semantics.
+
+## Why MCPQ
+
+Traditional MCP usage is often described as request → response.
+
+Agents also need:
+
+- background execution;
+- retries;
+- delayed work;
+- human approval;
+- fan-out;
+- event-driven activation;
+- durable handoff;
+- recovery after process or connection failure.
+
+MCPQ makes communication an explicit Agent capability rather than treating every interaction as a synchronous tool call.
 
 ## Failure isolation
 
-An invalid top-level `mcp.json` disables MCP for the plugin. An invalid or unavailable individual server disables only that entry. Other servers, skills, and client extensions continue loading.
+A broken channel MUST NOT disable independent channels or Actions when the runtime can isolate the failure.
 
-Download [`mcp.schema.json`](/schemas/1.0.0/mcp.schema.json).
+Authentication and authorization failures are runtime failures, not reasons to treat every other channel as invalid.
