@@ -26,13 +26,13 @@ The distinction is:
 
 Every semantic Agent has one root Agent Skill.
 
-The root SKILL.md is derived from the Agent's Behavior Flow and describes durable behavior across the Agent's capabilities.
+The root SKILL.md is derived from the Agent's Behavior Flow and describes durable behavior across the Agent's capabilities. Its frontmatter name matches the Agent identity in agent.json.
 
 It should cover scope, evidence, decisions, invariants, recovery, escalation, and expected outcomes.
 
 ## Action Skill
 
-An Action directory contains its own SKILL.md and describes one executable capability.
+An Action directory contains its own SKILL.md and describes one executable capability. The Action Skill name matches the Action directory name.
 
     actions/
     ├── create-order/
