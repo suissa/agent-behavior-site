@@ -79,7 +79,7 @@ It connects AtomicSkills to decisions, transitions, Actions, and outcomes.
 
 An Action is the executable capability boundary.
 
-Its own actions/<name>/SKILL.md describes how that capability behaves when selected. Scripts, references, and assets support the capability but do not replace its semantic identity.
+Its own actions/<name>/SKILL.md describes how that capability behaves when selected, and its Skill name follows the Action identity. Scripts, references, and assets support the capability but do not replace its semantic identity.
 
 Agent Behavior therefore uses:
 
@@ -213,3 +213,23 @@ Agent Behavior does not force a particular UI, database, LLM, queue broker, obse
 Those components may integrate with the Agent Runtime without becoming mandatory parts of the portable Agent package.
 
 The specification standardizes the semantic boundary necessary to make an Agent portable: identity, derived behavior, executable Actions, persistent Knowledge, communication, and runtime responsibilities.
+
+
+## Intent-driven development
+
+The semantic model is also designed for intent-driven testing and development.
+
+The test describes the intention and desired outcome; the implementation is free to realize that outcome through the Behavior Flow.
+
+A representative trajectory can distinguish:
+
+    AS Human
+    I OPEN Login
+    I TYPE ...
+    I HOPE SEE Dashboard
+
+The important property is semantic direction:
+
+    Intent → Behavior Flow → Trajectory → Validation
+
+An implementation command can be part of the observed trajectory, but it is not the definition of the desired behavior.
