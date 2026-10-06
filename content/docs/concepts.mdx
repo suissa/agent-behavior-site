@@ -1,0 +1,215 @@
+---
+title: Semantic model
+description: The concepts that distinguish Agent Behavior from a generic Skill or Plugin package.
+---
+
+Agent Behavior has a semantic center that is larger than SKILL.md.
+
+## The complete model
+
+    Intent
+      ↓
+    Behavior Flow
+      ├── AtomicSkill
+      ├── AtomicBehavior
+      └── Action
+             ↓
+           Agent
+             ├── Agent Skill
+             ├── Actions
+             ├── Knowledge
+             └── MCPQ
+                    ↓
+                  Actor
+                    ↓
+                 Runtime
+                    ↓
+               Trajectory
+                    ↓
+                 Evidence
+                    ↓
+                   Wiki
+                    ↓
+                Evolution
+                    ↓
+             Behavior Flow update
+                    ↓
+            derived Skill regeneration
+
+This is the model to implement. The filesystem package is the portable projection of this model, not the whole semantic model by itself.
+
+## Agent
+
+An Agent is the first-class semantic execution unit.
+
+It owns identity, the Agent Skill, Actions, Knowledge, and MCPQ boundaries. This is the main difference from a Plugin: a Plugin is a package of reusable components; an Agent is the thing whose behavior is being executed.
+
+## Agent Skill
+
+Every semantic Agent instance has one Agent Skill derived from its Behavior Flow.
+
+The SKILL.md file is the portable representation of that behavior. It can contain the instructions, constraints, recovery rules, and resources required by a runtime, while the semantic Behavior Flow remains the source model.
+
+This makes the Skill a projection rather than an unstructured prompt.
+
+## Behavior Flow
+
+The Behavior Flow describes how an Agent should move from Intent to behavior, decisions, Actions, recovery, and outcomes.
+
+The central distinction is:
+
+    Behavior Flow = normative behavior
+    Trajectory   = observed behavior
+
+This creates a formal boundary between what the Agent is supposed to do and what it actually did.
+
+## AtomicSkill
+
+An AtomicSkill is the smallest reusable semantic unit of capability, knowledge, or decision logic.
+
+AtomicSkills can be composed into larger behaviors without becoming executable Actors by themselves.
+
+## AtomicBehavior
+
+An AtomicBehavior is the smallest behavior-level composition that has semantic meaning in the Behavior Flow.
+
+It connects AtomicSkills to decisions, transitions, Actions, and outcomes.
+
+## Action
+
+An Action is the executable capability boundary.
+
+Its own actions/<name>/SKILL.md describes how that capability behaves when selected. Scripts, references, and assets support the capability but do not replace its semantic identity.
+
+Agent Behavior therefore uses:
+
+    Skill = behavioral definition / portable projection
+    Action = executable capability
+    Agent = semantic execution unit
+
+## Actor
+
+The Actor is the concrete execution identity.
+
+One Agent definition may be instantiated or scheduled as one or more Actors depending on the Runtime. The Actor is therefore not the same thing as the filesystem package.
+
+## Runtime
+
+The Runtime hosts the Actor.
+
+It provides scheduling, isolation, authorization, model execution, queue infrastructure, observability, and policy enforcement. Those responsibilities should not be hidden inside SKILL.md.
+
+## Intent
+
+Intent is the semantic cause or goal that selects a Behavior Flow.
+
+It can originate from a human, event, another Agent, schedule, or external system.
+
+An Intent is not required to look like a function call. Natural-language requests and structured events can both carry Intent.
+
+## Trajectory
+
+A Trajectory is the concrete path taken by an Actor through the Behavior Flow.
+
+Trajectory data can include:
+
+    Intent
+    → selected behaviors
+    → Action executions
+    → decisions
+    → events
+    → state changes
+    → outputs
+    → errors
+    → recovery
+    → final outcome
+
+That makes Trajectory useful for testing, diagnosis, observability, and learning.
+
+## Knowledge and Wiki
+
+Evidence is what happened.
+
+The Wiki is what the system has learned and retained from what happened.
+
+Active Skills are what the Agent is currently allowed to execute as behavior.
+
+These must remain separate.
+
+    Evidence ≠ Wiki ≠ Skill
+
+That separation prevents raw traces or model-generated notes from silently becoming executable instructions.
+
+## Evolution
+
+Evolution is the controlled path from experience to improved behavior.
+
+    Evidence
+      ↓
+    Wiki
+      ↓
+    Proposal
+      ↓
+    Validation
+      ↓
+    Behavior Flow
+      ↓
+    Agent or Action Skill
+
+A failed proposal is retained instead of replacing the current behavior. This is the key connection to WikiSkill's persistent-knowledge model.
+
+## MCPQ
+
+MCPQ is the Agent communication boundary.
+
+Queue is the default mode because Agent work can be asynchronous, durable, retried, delayed, resumed, delegated, or sent to human healing.
+
+MCP is supported as an interoperability mode. MCPQ does not redefine MCP.
+
+Current MCP Tasks provides an official durable asynchronous task mechanism that can be implemented over or alongside queue infrastructure.
+
+## Human healing
+
+Human healing is a recovery boundary, not a separate type of Agent.
+
+An Agent can enqueue work when a decision requires human judgment, then resume the same Behavior Flow using the correlation and authorization context needed for safe continuation.
+
+This is why Queue is the natural default for MCPQ.
+
+## Security
+
+The package being structurally valid does not make it trusted.
+
+Trust, authorization, isolation, secret handling, provenance, and auditability belong to the Runtime.
+
+The Skill describes behavior; the Runtime decides whether that behavior is authorized to execute.
+
+## Semantic-as-Code
+
+The semantic layer can be represented in structured or human-readable artifacts and then projected into portable files.
+
+A Semantic-as-Code implementation can keep:
+
+    Behavior Flow
+    AtomicSkills
+    AtomicBehaviors
+    Actions
+    invariants
+    outcomes
+
+as source artifacts and generate:
+
+    agent.json
+    SKILL.md
+    actions/*/SKILL.md
+    mcpq.json
+
+The portable package remains useful to runtimes that do not implement the author's semantic DSL.
+
+## Scope
+
+Agent Behavior does not force a particular UI, database, LLM, queue broker, observability backend, or application architecture.
+
+Those components may integrate with the Agent Runtime without becoming mandatory parts of the portable Agent package.
+
+The specification standardizes the semantic boundary necessary to make an Agent portable: identity, derived behavior, executable Actions, persistent Knowledge, communication, and runtime responsibilities.
