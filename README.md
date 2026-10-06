@@ -1,28 +1,47 @@
-# Agent Plugins Site
+# Agent Behavior Specification
 
-The documentation site for [Agent Plugins](https://github.com/agentplugins/agent-plugins-spec), an open, vendor-neutral standard for packaging reusable components that extend AI agents into distributable plugins.
+Documentation and reference implementation site for the Agent Behavior specification: a portable, behavior-first format for packaging an executable Agent with its own behavioral skill, Actions, persistent knowledge, and MCPQ channels.
 
-Documentation is published at [agent-plugins.org](https://agent-plugins.org).
+The specification incorporates the interoperable parts of Agent Skills and Agent Plugins, the persistent-knowledge and validation-gated evolution model introduced by WikiSkill, and the architecture developed in this repository.
 
-The versioned specification is authoritative. This repository presents that material as guides, reference documentation, canonical schemas, and machine-readable Markdown endpoints while preserving links to the source specification.
+## What changed
 
-[`specification-source.json`](specification-source.json) records the exact specification revision used for the current documentation rewrite. Before release, regenerate the embedded specification from the published `1.0.0` tag so its source revision and publication status are current.
+Agent Skills specified an important and reusable part of the problem: a portable SKILL.md directory containing instructions, scripts, references, and resources that an agent can load progressively. Agent Plugins then standardized how Skills and MCP servers can be packaged and discovered together.
+
+Our semantic model is different.
+
+In Agent Behavior, the Agent is the primary execution unit. An Agent has its own SKILL.md, Actions are the executable capabilities of that Agent, persistent knowledge is separated from runtime instructions, and MCPQ channels provide the communication boundary. A Queue is the default MCPQ channel mode.
+
+This specification therefore contains the concepts needed to represent Agent Skills and Agent Plugins, while adding Agent identity, Action semantics, persistent knowledge, experience-driven evolution, validation gates, and MCPQ channels.
+
+## Repository layout
+
+- content/docs/ — documentation and normative specification.
+- public/schemas/ — canonical machine-readable schemas.
+- app/ and components/ — documentation site.
+- specification-source.json — provenance for external specifications incorporated into the design.
 
 ## Development
 
-```sh
-pnpm install
-pnpm dev
-```
+    pnpm install
+    pnpm dev
 
-Run a production build with:
+Production build:
 
-```sh
-pnpm build
-```
+    pnpm build
 
-The site uses [Next.js](https://nextjs.org), [Fumadocs](https://fumadocs.dev), and the Vercel Geistdocs template. Documentation pages live in `content/docs/`; canonical schemas are published from `public/schemas/`.
+## Design lineage
+
+The specification explicitly documents its relationship to:
+
+- Agent Skills — portable SKILL.md packages and progressive disclosure.
+- Agent Plugins 1.0 — fixed-location discovery, manifests, packaging, MCP configuration, and component failure isolation.
+- WikiSkill — separation of evidence, persistent knowledge, executable skills, proposal/evolution loops, and validation-gated promotion.
+- MCP — protocol interoperability.
+- MCP Tasks and related asynchronous work — background and durable execution primitives that motivate queue-oriented Agent communication.
+
+The goal is not to rename these projects. It is to compose their useful primitives into a single Agent execution model with a different semantic center.
 
 ## Licensing
 
-Documentation and authored assets are available under CC-BY-4.0. Source code, configuration, schemas, and scripts are available under Apache-2.0. See [LICENSE.md](LICENSE.md) for the complete mapping.
+Documentation and authored assets are available under CC-BY-4.0. Source code, configuration, schemas, and scripts are available under Apache-2.0. See LICENSE.md.
