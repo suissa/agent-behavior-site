@@ -1,48 +1,69 @@
 ---
 title: Loading and discovery
-description: Validate the manifest, discover supported components, and apply narrow failure boundaries.
+description: Discover Agent components and apply narrow failure boundaries.
 ---
 
-## Establish the package boundary
+## Establish the Agent boundary
 
-The plugin root is a single filesystem location. Every package file a client discovers, reads, or executes must remain inside the filesystem-resolved root after resolving symlinks, junctions, reparse points, and equivalent mechanisms.
+The Agent root is one filesystem location. Every package file discovered, read, or executed must remain inside the filesystem-resolved root.
 
 ## Load the manifest first
 
-Clients check for `plugin.json` at the plugin root and load it before discovering components or applying client behavior. The closed JSON object has two required fields: `$schema` selects the Agent Plugins version and validation contract, while `name` identifies the plugin. Other permitted fields provide optional metadata or [client-extension data](/plugin-authors/client-extensions). See the [manifest reference](/plugin-authors/manifest) for the complete field set.
+The runtime loads agent.json before discovering components.
 
-Select locally supported validation and interpretation rules from `$schema`; do not retrieve a schema while loading the plugin. A missing or unsupported `$schema` rejects the plugin.
+The manifest identifies the specification version and Agent identity. It does not relocate component paths.
 
-The following two manifest schema violations are non-fatal:
+A missing or unsupported schema identifier is a manifest failure.
 
-- Report and ignore each unknown top-level field, then continue if the manifest is otherwise valid.
-- Report and ignore a non-object `extensions` field, then continue loading components.
+## Discover the Agent Skill
 
-Any other manifest schema violation rejects the complete plugin.
+The root SKILL.md is required.
 
-When `extensions` is an object, each member is owned by the client identified by its reverse-domain namespace. Ignore namespaces the client does not implement without validating their values.
+The runtime validates its frontmatter using the Agent Skills-compatible rules and then interprets the body as the Agent's behavioral contract.
 
-## Discover supported components
+## Discover Actions
 
-Agent Plugins assigns each component type a fixed location:
+The runtime scans only immediate child directories of actions/.
 
-| Component type | Fixed location | Discovery rule |
-| --- | --- | --- |
-| [Skills](/plugin-authors/skills) | `skills/` | Immediate child directories containing a regular `SKILL.md`. |
-| [MCP servers](/plugin-authors/mcp-servers) | `mcp.json` | One root JSON configuration document. |
+For each child directory:
 
-A missing fixed location is not an error. If a location exists with the wrong filesystem kind, mark only that component type invalid and continue with other supported types.
+- SKILL.md is required;
+- the Action name must be stable and match the directory identity;
+- bundled scripts, references, and assets remain scoped to that Action;
+- invalid Actions are skipped without disabling siblings.
 
-If a discovered skill does not conform to the Agent Skills specification, skip that skill and continue loading its siblings. Do not recursively search nested descendants for additional skills.
+The runtime must not recursively invent Actions from arbitrary nested SKILL.md files.
 
-A client ignores component types it does not implement. Lack of support is not itself a plugin error; a conformant client implements at least one of skills or MCP servers. How a client presents a valid skill to users or models remains client policy.
+## Discover knowledge
 
-## Path failure boundaries
+knowledge/ is optional.
 
-Apply the narrowest relevant boundary:
+A runtime may recognize:
 
-1. Reject the plugin if `plugin.json` resolves outside the plugin root.
-2. Disable one component type when its fixed location has the wrong filesystem kind or escapes the root.
-3. Skip one skill when its `SKILL.md` escapes the root.
-4. Skip one MCP entry when a configured package path escapes its permitted root.
-5. Deny access for other escaping package paths.
+- evidence/ for execution observations;
+- wiki/ for persistent knowledge;
+- evolution/ for proposals, validations, and decisions.
+
+The presence of these directories does not make their content active instructions.
+
+## Discover MCPQ
+
+mcpq.json is optional.
+
+A missing file means the Agent has no portable MCPQ channels.
+
+When present, the runtime validates the top-level document and then each channel independently.
+
+A channel with no explicit type defaults to queue.
+
+## Failure boundaries
+
+Apply the narrowest boundary:
+
+1. reject the Agent if the root manifest is invalid;
+2. reject the Agent if the required root Skill is invalid;
+3. skip one invalid Action;
+4. skip one invalid MCPQ channel;
+5. preserve independent valid components after any isolated failure.
+
+This is inherited from the failure-isolation principle of Agent Plugins, but applied to Agent semantics.
