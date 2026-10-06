@@ -38,23 +38,23 @@ Agent Behavior reuses those file mechanics. The semantic role is extended:
 - Action SKILL.md is the behavioral projection of one executable capability;
 - scripts, references, and assets remain implementation resources.
 
-The current Agent Skills specification requires name and description in SKILL.md frontmatter, constrains names to lowercase letters, numbers, and hyphens, and supports optional license, compatibility, metadata, and allowed-tools fields. citeturn138680search2
+The current Agent Skills specification requires name and description in SKILL.md frontmatter, constrains names to lowercase letters, numbers, and hyphens, and supports optional license, compatibility, metadata, and allowed-tools fields. See the [Agent Skills specification](https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx).
 
 ### 2.2 Agent Plugins
 
-Agent Plugins 1.0 standardizes a package with plugin.json, fixed component locations, Skills, MCP servers, extensions, and narrow failure boundaries. It is explicitly a package format for reusable components rather than an Agent execution ontology. citeturn138680search0turn138680search4
+Agent Plugins 1.0 standardizes a package with plugin.json, fixed component locations, Skills, MCP servers, extensions, and narrow failure boundaries. It is explicitly a package format for reusable components rather than an Agent execution ontology. See the [Agent Plugins 1.0 specification](https://github.com/agentplugins/agent-plugins-spec/blob/main/spec/1.0.0.md).
 
 Agent Behavior keeps the useful packaging and isolation principles while changing the semantic center from Plugin to Agent.
 
 ### 2.3 WikiSkill
 
-WikiSkill separates raw execution experience, persistent knowledge, and executable skills, then uses a proposal and validation process to evolve skills. The paper explicitly identifies persistent knowledge accumulation as important to skill evolution. citeturn138680academia36
+WikiSkill separates raw execution experience, persistent knowledge, and executable skills, then uses a proposal and validation process to evolve skills. The paper explicitly identifies persistent knowledge accumulation as important to skill evolution. See [WikiSkill](https://arxiv.org/abs/2608.27454).
 
 Agent Behavior maps that lifecycle into evidence, Wiki, evolution proposals, validation, and active derived Skills.
 
 ### 2.4 MCP and asynchronous execution
 
-MCP defines interoperable protocol semantics. In 2026, the official Tasks extension provides durable task handles for long-running work, deferred result retrieval, progress state, cancellation, and input-required flows. citeturn316678search0turn316678search1
+MCP defines interoperable protocol semantics. In 2026, the official Tasks extension provides durable task handles for long-running work, deferred result retrieval, progress state, cancellation, and input-required flows. See the [MCP Tasks extension](https://github.com/modelcontextprotocol/ext-tasks) and [SEP-2663](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/seps/2663-tasks-extension.md).
 
 Agent Behavior introduces MCPQ as the Agent-level communication boundary. Queue is the default execution mode; MCP is an interoperability binding, not a replacement for queue semantics.
 
@@ -229,7 +229,7 @@ When an Action is selected, its complete SKILL.md SHOULD be loaded.
 
 References, assets, and scripts SHOULD be loaded only when required.
 
-This preserves the context-efficiency principle of Agent Skills. citeturn138680search2
+This preserves the context-efficiency principle of Agent Skills. See the [Agent Skills specification](https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx).
 
 ## 7. Actions
 
@@ -325,7 +325,7 @@ A candidate MUST pass the configured validation policy before becoming active wh
 
 A rejected proposal MUST NOT erase the Evidence, Wiki knowledge, or proposal history that produced it.
 
-This preserves the central WikiSkill principle that knowledge can compound even when a particular behavior change is rejected. citeturn138680academia36
+This preserves the central WikiSkill principle that knowledge can compound even when a particular behavior change is rejected. See [WikiSkill](https://arxiv.org/abs/2608.27454).
 
 ## 9. MCPQ
 
@@ -385,7 +385,7 @@ MCPQ does not redefine MCP.
 
 ### 9.3 MCP Tasks
 
-Current MCP Tasks is an official extension identified as io.modelcontextprotocol/tasks. It models durable asynchronous task state with polling and deferred results. citeturn316678search0turn316678search1
+Current MCP Tasks is an official extension identified as io.modelcontextprotocol/tasks. It models durable asynchronous task state with polling and deferred results. See the [MCP Tasks extension](https://github.com/modelcontextprotocol/ext-tasks) and [SEP-2663](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/seps/2663-tasks-extension.md).
 
 An Agent Behavior runtime MAY implement an MCP channel using an internal Queue. That mapping is an implementation strategy, not a change to the MCP wire protocol.
 
