@@ -2,9 +2,9 @@
   "pages": [
     "index",
     "compatible-clients",
-    "---For Plugin Authors---",
+    "---For Agent Authors---",
     "...plugin-authors",
-    "---For Client Implementers---",
+    "---For Runtime Implementers---",
     "...client-implementers",
     "---Reference---",
     "specification",
