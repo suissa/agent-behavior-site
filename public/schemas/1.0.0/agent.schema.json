@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/suissa/agent-behavior-site/blob/main/public/schemas/1.0.0/agent.schema.json",
   "title": "Agent Behavior Manifest",
-  "description": "Machine-readable schema for agent.json in Agent Behavior 1.0.0.",
+  "description": "Machine-readable schema for agent.json in Agent Behavior 1.0.0-draft.",
   "type": "object",
   "properties": {
     "$schema": {
@@ -12,7 +12,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 64,
-      "pattern": "^(?!.*(?:--|\\.\\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
     },
     "version": {
       "type": "string",
@@ -39,7 +39,39 @@
     },
     "runtime": {
       "type": "object",
-      "additionalProperties": true
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "features": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "behavior": {
+      "type": "object",
+      "description": "Optional traceability from the portable Agent Skill to its semantic Behavior Flow source.",
+      "properties": {
+        "flow": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relative path or URI of the semantic Behavior Flow source."
+        },
+        "flowDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "skill": {
+          "const": "SKILL.md"
+        },
+        "skillDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": ["flow"],
+      "additionalProperties": false
     },
     "extensions": {
       "type": "object",

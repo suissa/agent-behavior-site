@@ -3,9 +3,15 @@ title: MCPQ channels
 description: Configure queue-first Agent communication with optional MCP interoperability.
 ---
 
-MCPQ is the Agent communication boundary.
+MCPQ is the communication boundary of an Agent.
 
-The root configuration is mcpq.json. A channel defaults to Queue mode.
+The important semantic distinction is:
+
+    MCPQ
+      ├── Queue semantics for Agent work
+      └── MCP interoperability when required
+
+A channel defaults to Queue.
 
 ## Minimal configuration
 
@@ -18,57 +24,71 @@ The root configuration is mcpq.json. A channel defaults to Queue mode.
       }
     }
 
-## Channel model
+## Queue is the default
 
-Each channel has a stable name and a type.
+Queue is the default because the Agent is an asynchronous Actor.
 
-Supported types in this draft are:
+Work may need to:
 
-- queue — the default asynchronous channel.
-- mcp — an interoperable MCP channel.
+- remain durable after a process or connection failure;
+- retry;
+- wait;
+- resume;
+- fan out;
+- be delegated;
+- enter human healing.
 
-Queue is the default even when type is omitted.
+A caller should not have to keep a request open while the Agent is performing durable work.
 
-## Queue channels
+## Channel semantics
 
-A queue channel SHOULD define only the guarantees that the runtime can actually provide.
+A Queue channel may declare:
 
-Common properties include:
+- delivery guarantees;
+- ordering;
+- retry;
+- acknowledgement;
+- leases or visibility;
+- dead-letter handling;
+- correlation and causation;
+- idempotency;
+- expiry or cancellation when supported.
 
-- delivery: at-most-once, at-least-once, or exactly-once where genuinely supported;
-- ordering: whether message order is significant;
-- retry policy;
-- dead-letter policy;
-- visibility or lease duration;
-- idempotency requirements.
+The runtime MUST NOT advertise a guarantee it cannot actually enforce.
 
-The specification does not mandate a particular queue technology.
+## MCP mode
 
-## MCP channels
+An MCP channel binds the Agent boundary to MCP.
 
-An MCP channel binds the Agent boundary to an MCP server. MCP remains authoritative for MCP protocol semantics, capabilities, authorization, and lifecycle.
+MCP remains authoritative for protocol semantics, capabilities, transports, authorization, and lifecycle.
 
-A runtime MAY map long-running MCP work to an internal Queue. The mapping must preserve correlation, authorization, and result semantics.
+MCPQ does not redefine MCP.
 
-## Why MCPQ
+## MCP Tasks
 
-Traditional MCP usage is often described as request → response.
+The current MCP Tasks extension (io.modelcontextprotocol/tasks) supports durable task handles, deferred result retrieval, progress states, cancellation, and input-required flows.
 
-Agents also need:
+An Agent runtime MAY map a long-running MCP operation to an internal Queue, provided the MCP wire semantics and authorization context remain intact.
 
-- background execution;
-- retries;
-- delayed work;
-- human approval;
-- fan-out;
-- event-driven activation;
-- durable handoff;
-- recovery after process or connection failure.
+## Human healing
 
-MCPQ makes communication an explicit Agent capability rather than treating every interaction as a synchronous tool call.
+Human healing is naturally represented as a Queue boundary:
+
+    Agent
+      │
+      ▼
+    human-healing queue
+      │
+      ▼
+    Human decision / correction
+      │
+      ▼
+    resumed Behavior Flow
+
+The Queue carries correlation and authorization context needed for safe continuation rather than exposing unrelated secrets.
 
 ## Failure isolation
 
 A broken channel MUST NOT disable independent channels or Actions when the runtime can isolate the failure.
 
-Authentication and authorization failures are runtime failures, not reasons to treat every other channel as invalid.
+Authentication or connection failure affects the corresponding channel unless Agent policy explicitly makes it required.

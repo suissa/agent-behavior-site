@@ -1,9 +1,20 @@
 ---
 title: Build an Agent
-description: Create a portable Agent package with an Agent Skill, Actions, knowledge, and MCPQ channels.
+description: Create a portable Agent package from a semantic Behavior Flow with a derived Agent Skill, Actions, Knowledge, and MCPQ.
 ---
 
-An Agent package is a directory whose root identifies one executable Actor.
+An Agent package is the portable filesystem projection of one semantic Agent.
+
+The semantic source may begin as:
+
+    Intent
+      ↓
+    Behavior Flow
+      ├── AtomicSkill
+      ├── AtomicBehavior
+      └── Actions
+
+The package exposes that model through fixed locations.
 
 ## Minimal package
 
@@ -14,7 +25,11 @@ An Agent package is a directory whose root identifies one executable Actor.
         └── hello/
             └── SKILL.md
 
-agent.json identifies the package. The root SKILL.md defines the Agent's durable behavior. Each directory below actions/ defines one executable capability.
+agent.json identifies the Agent.
+
+The root SKILL.md is the Agent Skill derived from the Behavior Flow. It is the portable behavioral projection, not an unrelated prompt.
+
+Each directory below actions/ defines one executable Action and contains its Action Skill.
 
 ## Add communication
 
@@ -28,22 +43,40 @@ agent.json identifies the package. The root SKILL.md defines the Agent's durable
     │       └── SKILL.md
     └── mcpq.json
 
-MCPQ channels are optional. When present, Queue is the default channel mode.
+MCPQ channels are optional. When present, a channel defaults to Queue.
 
 ## Add persistent knowledge
 
-For Agents that learn from experience, use:
+For Agents that learn from experience:
 
     knowledge/
     ├── evidence/
     ├── wiki/
     └── evolution/
 
-Keep evidence and wiki state separate from active SKILL.md files. A learned change should pass a validation gate before it becomes active behavior.
+Keep Evidence and Wiki state separate from active Skills.
+
+The normal evolution path is:
+
+    Trajectory
+      ↓
+    Evidence
+      ↓
+    Wiki
+      ↓
+    Proposal
+      ↓
+    Validation
+      ↓
+    Behavior Flow change
+      ↓
+    regenerate Skill
+
+A learned change should pass a validation gate before it becomes active behavior.
 
 ## Agent-level SKILL.md
 
-The root skill should describe durable behavior, not a list of every tool.
+The root Skill should describe durable Agent behavior, not a list of every tool.
 
     ---
     name: support-agent
@@ -52,27 +85,32 @@ The root skill should describe durable behavior, not a list of every tool.
 
     # Support Agent
 
-    State the Agent's scope, evidence requirements, decisions, execution principles, recovery rules, and failure boundaries.
+    State the Agent's scope, evidence requirements, decisions, invariants, execution principles, recovery rules, and expected outcomes.
+
+The root Skill name MUST match agent.json name.
 
 ## Action-level SKILL.md
 
-Actions are where executable capability becomes concrete.
+Actions are executable capabilities.
+
+    actions/
+    └── create-order/
+        └── SKILL.md
+
+The Action Skill name MUST match the Action directory name.
 
 An Action should define its trigger, inputs, preconditions, decision rules, observable execution, postconditions, recovery, and prohibited outcomes.
 
-The format remains compatible with the Agent Skills SKILL.md mechanics.
-
-## Authoring rule
-
-Do not duplicate the same behavioral contract in the Agent Skill and every Action. The Agent Skill defines global behavior; an Action defines capability-specific behavior. Shared references belong in references/ or the persistent knowledge layer when they are learned artifacts.
+The file mechanics remain compatible with Agent Skills.
 
 ## Validation
 
 Before publishing:
 
 1. Validate agent.json.
-2. Validate the root SKILL.md using Agent Skills-compatible rules.
-3. Validate every Action independently.
+2. Validate the root SKILL.md using Agent Skills-compatible frontmatter rules.
+3. Validate each Action independently.
 4. Validate mcpq.json when present.
-5. Run representative trajectories through the configured validation gate.
-6. Confirm rejected evolution proposals remain in knowledge/evolution/ rather than silently disappearing.
+5. Confirm the Agent Skill is traceable to its Behavior Flow source and version when semantic provenance is available.
+6. Run representative trajectories through the configured validation gate.
+7. Confirm rejected evolution proposals remain in knowledge/evolution/ rather than silently disappearing.

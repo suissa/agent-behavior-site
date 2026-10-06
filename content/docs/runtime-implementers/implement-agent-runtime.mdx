@@ -1,98 +1,128 @@
 ---
 title: Implement an Agent runtime
-description: Add Agent Behavior discovery, validation, execution, knowledge, and MCPQ support to a runtime.
+description: Execute the semantic Agent model while preserving derived Skills, Action boundaries, trajectories, Knowledge, and MCPQ semantics.
 ---
 
-A conformant runtime treats the Agent as the primary execution unit.
+A conformant runtime treats the Agent as the first-class execution unit.
 
 ## Loading sequence
 
 1. Establish the filesystem-resolved Agent root.
 2. Locate and validate agent.json.
 3. Require and validate the root SKILL.md.
-4. Discover Actions from actions/.
-5. Discover mcpq.json when present.
-6. Initialize knowledge and evolution facilities according to runtime policy.
-7. Apply extensions owned by the runtime.
-8. Start execution only after required validation and trust checks pass.
+4. Resolve the Agent's semantic identity, Behavior Flow provenance, and Skill provenance when available.
+5. Discover Actions from actions/.
+6. Discover mcpq.json when present.
+7. Initialize authorized Knowledge and evolution facilities.
+8. Apply supported extensions.
+9. Start execution only after required validation and trust checks pass.
+
+## Semantic execution
+
+The runtime executes:
+
+    Intent
+      ↓
+    Behavior Flow
+      ↓
+    Agent Skill
+      ↓
+    Action selection
+      ↓
+    Actor
+      ↓
+    Runtime effects
+      ↓
+    Trajectory
+
+The portable SKILL.md is not an excuse to erase the Behavior Flow semantics. A runtime that knows the semantic source SHOULD preserve the relationship between the source and its derived Skill.
 
 ## Portable versus runtime-owned behavior
 
 Agent Behavior defines:
 
-- package structure;
 - Agent identity;
-- Agent and Action Skill semantics;
-- Action discovery;
-- knowledge lifecycle boundaries;
-- MCPQ channel configuration;
-- failure isolation.
+- Agent Skill and its semantic role;
+- Action boundaries;
+- Knowledge lifecycle boundaries;
+- MCPQ configuration;
+- failure isolation;
+- the distinction between Actor and Runtime.
 
-A runtime decides:
+The runtime decides:
 
 - installation and distribution;
 - trust and permissions;
 - sandboxing;
 - queue implementation;
-- process scheduling;
+- scheduling;
 - model selection;
 - UI;
 - observability backend;
 - validation implementation.
 
-## Execution model
-
-The runtime should maintain an explicit boundary:
-
-    User or Event
-          |
-          v
-       Agent Actor
-          |
-       +--+--+
-       |     |
-       v     v
-    Action  MCPQ
-       |     |
-       +--+--+
-          |
-       Runtime
-
-The root Agent Skill supplies durable behavior. The selected Action supplies capability-specific behavior. MCPQ supplies the communication boundary.
-
 ## Knowledge isolation
 
-Normal execution SHOULD consume only the approved active Skills and the knowledge explicitly authorized by runtime policy.
+Normal execution SHOULD consume only active Skills and Knowledge explicitly authorized by policy.
 
-The raw evidence store and the evolution Wiki should not automatically become prompt context. This preserves the separation demonstrated by WikiSkill between task execution and the subsystem that learns from execution.
+Raw Evidence and evolution proposals MUST NOT automatically become prompt context.
+
+This preserves the separation between execution, persistent knowledge, and executable behavior demonstrated by WikiSkill.
 
 ## Evolution
 
-If the runtime supports evolution:
+When evolution is enabled:
 
-1. collect execution evidence;
-2. consolidate evidence into persistent Wiki knowledge;
-3. generate a candidate Skill or Action change;
-4. validate it on representative held-out work;
-5. promote only when the configured gate passes;
-6. retain rejected proposals and their evidence.
+    Trajectory
+      ↓
+    Evidence
+      ↓
+    Wiki
+      ↓
+    Proposal
+      ↓
+    Validation
+      ↓
+    Behavior Flow
+      ↓
+    regenerate Agent or Action Skill
 
-The runtime MUST make the validation policy explicit. A model-generated proposal is not, by itself, evidence that the proposal improved behavior.
+The runtime MUST make the validation policy explicit.
+
+A model-generated proposal is not, by itself, evidence of improvement.
+
+Rejected proposals remain retained knowledge and history.
+
+## Trajectory validation
+
+A runtime or attached testing system MAY validate a Trajectory against:
+
+- the triggering Intent;
+- selected Behavior Flow path;
+- Action inputs;
+- Action outputs;
+- events;
+- state changes;
+- errors;
+- recovery behavior;
+- final outcome.
+
+This allows intent-driven tests to validate semantic outcomes instead of only implementation commands.
 
 ## Failure isolation
 
-The runtime SHOULD isolate failures at the narrowest possible boundary:
+The runtime SHOULD isolate failures at the narrowest boundary:
 
 - invalid agent.json → reject Agent;
 - invalid root SKILL.md → reject Agent;
-- invalid Action → disable that Action;
-- invalid MCPQ channel → disable that channel;
-- failed MCP connection → disable that connection;
-- failed queue delivery → apply the queue retry policy;
-- failed learned proposal → keep the current active behavior and retain the proposal history.
+- invalid Action → disable only that Action;
+- invalid MCPQ channel → disable only that channel;
+- failed MCP connection → isolate that connection;
+- failed queue delivery → apply queue policy;
+- failed evolution proposal → preserve active behavior and proposal history.
 
 ## Security
 
-A runtime should treat Skills, Action scripts, MCP endpoints, queue messages, and learned knowledge as untrusted inputs until policy says otherwise.
+Skills, Action scripts, MCP endpoints, queue messages, and learned Knowledge are untrusted inputs until policy authorizes them.
 
-Path containment, secret isolation, sandboxing, authorization, provenance, and auditability are runtime responsibilities.
+Path containment, secret isolation, sandboxing, authentication, authorization, provenance, correlation, auditability, and policy enforcement are runtime responsibilities.

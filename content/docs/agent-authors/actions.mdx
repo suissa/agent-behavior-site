@@ -1,74 +1,88 @@
 ---
 title: Agent Skills and Actions
-description: Understand how Agent Skills become the behavioral and executable layers of an Agent.
+description: Understand the difference between a behavioral Skill, an executable Action, and their semantic source.
 ---
 
-Agent Skills provided the file-level primitive that this specification reuses: a directory centered on SKILL.md with optional scripts, references, and assets.
+Agent Skills provides a portable file primitive: a directory centered on SKILL.md with optional scripts, references, and assets.
 
-The semantic model here is different.
+Agent Behavior keeps that primitive but changes the semantic ownership.
 
-## Agent Skill versus Action Skill
+## Skill, Action, Agent
 
-The root SKILL.md describes the Agent as a whole.
+    Behavior Flow
+         │
+         ├──→ Agent SKILL.md
+         │
+         └──→ Action
+                 └──→ Action SKILL.md
 
-An Action directory contains its own SKILL.md and describes one executable capability.
+The distinction is:
 
-    Agent
-    ├── SKILL.md
-    └── actions/
-        ├── create-order/
-        │   └── SKILL.md
-        └── cancel-order/
-            └── SKILL.md
+    Skill = behavioral definition / portable projection
+    Action = executable capability boundary
+    Agent = semantic execution unit
 
-This means a Skill is not the same thing as an Action. The Skill is the behavioral contract; the Action is the capability boundary.
+## Agent Skill
 
-## SKILL.md compatibility
+Every semantic Agent has one root Agent Skill.
 
-The following Agent Skills concepts remain portable:
+The root SKILL.md is derived from the Agent's Behavior Flow and describes durable behavior across the Agent's capabilities. Its frontmatter name matches the Agent identity in agent.json.
 
-- YAML frontmatter with name and description.
-- Optional license, compatibility, metadata, and allowed-tools fields.
-- Markdown instructions.
-- scripts/ for executable helpers.
-- references/ for supporting documentation.
-- assets/ for static resources.
-- progressive disclosure.
+It should cover scope, evidence, decisions, invariants, recovery, escalation, and expected outcomes.
 
-The Agent Behavior runtime adds semantic ownership: every discovered Action belongs to a specific Agent, while the root Skill belongs to the Agent itself.
+## Action Skill
 
-## Recommended Action structure
+An Action directory contains its own SKILL.md and describes one executable capability. The Action Skill name matches the Action directory name.
 
     actions/
-    └── create-order/
-        ├── SKILL.md
-        ├── scripts/
-        ├── references/
-        └── assets/
+    ├── create-order/
+    │   └── SKILL.md
+    └── cancel-order/
+        └── SKILL.md
 
-An Action Skill SHOULD describe:
-
-- when the Action applies;
-- required evidence;
-- inputs and preconditions;
-- decisions;
-- execution;
-- outputs and postconditions;
-- recovery;
-- failure modes.
+An Action Skill should define applicability, inputs, preconditions, decisions, execution, postconditions, recovery, and prohibited outcomes.
 
 ## Why actions/ instead of skills/
 
-This is not cosmetic.
+This is semantic, not cosmetic.
 
-Agent Skills uses Skill as the portable unit of reusable expertise.
+Agent Skills uses Skill as the reusable unit.
 
-Agent Behavior uses Action as the executable unit and Skill as its behavioral definition.
+Agent Behavior uses Action as the executable unit and Skill as the behavioral representation of that unit.
 
-Renaming the directory makes the semantic ownership explicit while keeping the underlying SKILL.md format interoperable.
+The directory name therefore expresses ownership:
+
+    Agent
+      └── actions/
+             └── Action
+                    └── SKILL.md
 
 ## Progressive disclosure
 
-Metadata should be discoverable cheaply. The full Action Skill should load only when the Action is relevant. Supporting resources should be loaded only when required.
+The file mechanics remain compatible with Agent Skills:
 
-This preserves the context-efficiency model of Agent Skills.
+- YAML frontmatter;
+- required name and description;
+- optional license, compatibility, metadata, allowed-tools;
+- scripts/;
+- references/;
+- assets/;
+- progressive disclosure.
+
+See the Agent Skills specification for the portable file contract.
+
+## Do not create two sources of truth
+
+The semantic source is the Behavior Flow.
+
+The Skill is its portable projection.
+
+An implementation should therefore prefer:
+
+    change Behavior Flow
+          ↓
+    validate semantics
+          ↓
+    regenerate Skill
+
+over independently editing a generated Skill until it disagrees with the semantic model.
