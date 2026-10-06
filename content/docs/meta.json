@@ -3,9 +3,9 @@
     "index",
     "compatible-clients",
     "---For Agent Authors---",
-    "...plugin-authors",
+    "...agent-authors",
     "---For Runtime Implementers---",
-    "...client-implementers",
+    "...runtime-implementers",
     "---Reference---",
     "specification",
     "schemas"
