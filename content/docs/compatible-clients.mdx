@@ -1,20 +1,21 @@
 ---
 title: Compatible runtimes
-description: Runtime implementations that can adopt the Agent Behavior package model.
+description: How runtimes can adopt the Agent Behavior specification.
 type: overview
 full: true
 ---
 
-Agent Behavior is a specification, not a requirement that every runtime expose the same user experience.
+Agent Behavior is a draft specification. This site does not currently certify any runtime as fully conformant.
 
-A compatible runtime can adopt the model incrementally:
+A runtime may implement the model incrementally:
 
-1. Agent package and root SKILL.md.
-2. Action discovery.
-3. Queue-first MCPQ.
-4. Persistent knowledge and validation-gated evolution.
-5. Optional MCP interoperability.
+| Capability | Meaning |
+| --- | --- |
+| Agent package | Loads agent.json and the root SKILL.md. |
+| Actions | Discovers and executes actions/<name>/SKILL.md. |
+| MCPQ | Loads queue-first communication channels from mcpq.json. |
+| Knowledge | Separates evidence, Wiki knowledge, and evolution state from active behavior. |
+| Evolution | Uses validation gates before promoting learned changes. |
+| MCP interoperability | Maps MCPQ channels to MCP while preserving MCP semantics. |
 
-<CompatibleClients />
-
-The compatibility matrix should describe actual implementation support, not theoretical support. A runtime SHOULD identify which parts of the specification it implements and which remain unsupported.
+Conformance claims should be backed by executable tests and a published implementation matrix. The specification does not treat compatibility with Agent Skills or Agent Plugins as proof that a runtime implements Agent Behavior.
