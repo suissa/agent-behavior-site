@@ -1,0 +1,34 @@
+---
+title: Runtime extensions
+description: Extend an Agent package without changing the portable core.
+---
+
+The portable Agent Behavior core intentionally stays small.
+
+Runtime-specific capabilities may be placed under reverse-domain extension namespaces, for example:
+
+    com.example.runtime/
+
+The extension owner defines the contents and validation rules of its namespace.
+
+## Extension boundary
+
+An extension MUST NOT change the meaning of the portable core:
+
+- agent.json remains the Agent manifest;
+- SKILL.md remains the Agent behavioral definition;
+- actions/ remains the Action discovery location;
+- knowledge/ remains persistent knowledge;
+- mcpq.json remains the communication configuration.
+
+An extension may add runtime-specific scheduling, UI metadata, sandbox policy, deployment information, or observability configuration.
+
+## Unknown extensions
+
+A runtime that does not implement an extension SHOULD ignore it without preventing the portable Agent from loading.
+
+Extensions MUST NOT silently override core component locations or replace the Agent Skill.
+
+## Compatibility
+
+Extensions are intentionally outside the portable semantic core. A package that depends on a required extension SHOULD state that dependency in agent.json and its documentation.
